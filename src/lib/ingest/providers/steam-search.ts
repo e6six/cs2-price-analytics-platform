@@ -8,9 +8,11 @@ import type { Provider, ProviderResult, RawQuote } from "@/lib/ingest/types";
  * Steam Community Market — живой обход каталога через публичный поиск маркета
  * (`/market/search/render/`).
  *
- * У Steam нет массового прайса, но поиск отдаёт по 100 позиций за страницу,
- * поэтому весь каталог (~34 000 предметов ≈ 341 страница) можно пройти за
- * несколько прогонов, продолжая с сохранённого курсора `start`.
+ * У Steam нет массового прайса, а анонимным клиентам поиск отдаёт по 10 позиций
+ * на страницу (даже при `count=100` в ответе приходит `"pagesize": 10` и 10
+ * результатов — проверено на сервере), поэтому весь каталог (~35 500 предметов
+ * ≈ 3550 страниц) обходится за несколько прогонов, продолжая с сохранённого
+ * курсора `start`.
  *
  * Правила работы (осознанно консервативные):
  * - один запрос за раз, пауза `STEAM_SEARCH_INTERVAL_MS` (по умолчанию 3 с);
@@ -19,10 +21,11 @@ import type { Provider, ProviderResult, RawQuote } from "@/lib/ingest/types";
  *   а следующий прогон продолжает с того же `start`.
  */
 
-export const SEARCH_PAGE_SIZE = 100;
+/** Steam режет выдачу анонимным клиентам до 10 позиций на страницу (проверено на сервере). */
+export const SEARCH_PAGE_SIZE = 10;
 
 const SEARCH_PATH = "/market/search/render/";
-const MAX_PAGES_LIMIT = 1_000;
+const MAX_PAGES_LIMIT = 5_000;
 
 /**
  * Строка выдачи поиска после нормализации. `price` — минимальная цена лота в
@@ -137,7 +140,15 @@ export function parseSteamSearchPage(payload: unknown): SteamSearchPage {
 /** Человекочитаемая причина остановки обхода (попадает в notes и журнал прогонов). */
 export function describeStop(error: unknown): string {
   if (error instanceof HttpError) {
-    if (error.kind === "rate_limited" || error.status === 429) return "Steam вернул 429 (лимит частоты)";
+    if (error.kind === "rate_limited" || error.status === 429) {
+      const retryAfterSec =
+        typeof error.retryAfterMs === "number" && error.retryAfterMs > 0
+          ? Math.ceil(error.retryAfterMs / 1000)
+          : null;
+      return retryAfterSec
+        ? `Steam вернул 429 (лимит частоты, retry-after ${retryAfterSec} с)`
+        : "Steam вернул 429 (лимит частоты)";
+    }
     if (error.status === 403) return "Steam вернул 403 (доступ ограничен)";
     if (error.kind === "parse") return "Steam вернул страницу вместо JSON (похоже на защиту от частых запросов)";
     if (error.kind === "timeout") return "таймаут запроса";

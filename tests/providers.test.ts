@@ -134,7 +134,7 @@ test("steam-search зарегистрирован как bulk-источник �
   assert.equal(steamSearchProvider.mode, "bulk");
   assert.equal(steamSearchProvider.requiresCredentials, false);
   assert.equal(steamSearchProvider.supportsNameFilter, false);
-  assert.equal(SEARCH_PAGE_SIZE, 100);
+  assert.equal(SEARCH_PAGE_SIZE, 10);
 
   assert.equal(getProvider("steam-search"), steamSearchProvider);
   const datasetIndex = providers.findIndex((provider) => provider.id === "steam-dataset");
