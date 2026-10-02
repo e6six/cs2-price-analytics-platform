@@ -1,6 +1,7 @@
 import type { Provider } from "@/lib/ingest/types";
 import { steamCommunityProvider } from "@/lib/ingest/providers/steam-community";
 import { steamDatasetProvider } from "@/lib/ingest/providers/steam-dataset";
+import { steamSearchProvider } from "@/lib/ingest/providers/steam-search";
 import { skinportProvider } from "@/lib/ingest/providers/skinport";
 import { csfloatProvider } from "@/lib/ingest/providers/csfloat";
 import { buff163Provider } from "@/lib/ingest/providers/buff163";
@@ -13,6 +14,7 @@ import { skinbaronProvider } from "@/lib/ingest/providers/skinbaron";
  */
 export const providers: Provider[] = [
   steamDatasetProvider,
+  steamSearchProvider,
   skinportProvider,
   csfloatProvider,
   buff163Provider,
@@ -51,6 +53,7 @@ export function listProviderStatus(): Array<{
 export {
   steamCommunityProvider,
   steamDatasetProvider,
+  steamSearchProvider,
   skinportProvider,
   csfloatProvider,
   buff163Provider,

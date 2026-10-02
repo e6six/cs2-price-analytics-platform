@@ -48,7 +48,10 @@ export const SOURCE_SEEDS: SourceSeed[] = [
     requiresCredentials: false,
     docsUrl: "https://steamcommunity.com/market/",
     dataLicense: "Условия Steam (публичные цены, перепубликация ограничена)",
-    rateLimitNotes: "Неофициальный эндпоинт priceoverview; адаптер держит ≤12 запросов/мин и уважает Retry-After",
+    rateLimitNotes:
+      "priceoverview — неофициальный эндпоинт, адаптер держит ≤12 запросов/мин и уважает Retry-After; " +
+      "массовый обход поиска маркета (источник steam-search) — 3 с между страницами по 100 позиций, " +
+      "при 429/403 обход немедленно останавливается, а следующий прогон продолжает с курсора",
     priceSemantics: "lowest_price — минимальная цена активного лота в USD; median_sale — медиана продаж за сутки",
     normalizationNotes:
       "Цена в Steam Wallet, а не реальные деньги: вывод средств невозможен. Комиссия удерживается с продавца, покупатель платит указанную цену.",

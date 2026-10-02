@@ -36,12 +36,43 @@ const STEAM_CURRENCY_CODES: Record<string, number> = {
 
 const MAJOR_UNITS = new Set(["USD", "EUR", "GBP", "CHF", "AUD", "CAD", "NOK", "SEK", "PLN", "BRL", "TRY", "CNY", "UAH"]);
 
-const priceOverviewSchema = z.object({
-  success: z.boolean(),
-  lowest_price: z.string().optional(),
-  median_price: z.string().optional(),
-  volume: z.string().optional(),
-});
+/** Steam в разных эндпоинтах отдаёт булевы флаги то boolean, то 1/0, то строкой. */
+const flagSchema = z.union([z.boolean(), z.number(), z.string()]);
+
+const priceOverviewSchema = z
+  .object({
+    // Steam отдаёт success то boolean, то числом 1/0, то строкой.
+    success: flagSchema.nullable().optional(),
+    lowest_price: z.string().nullable().optional(),
+    median_price: z.string().nullable().optional(),
+    volume: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export type SteamPriceOverview = z.infer<typeof priceOverviewSchema>;
+
+/**
+ * Разбор ответа `priceoverview`. Отсутствие `success` — не отказ: решение
+ * принимается по наличию `lowest_price`, иначе котировка не выдумывается.
+ */
+export function parseSteamPriceOverview(payload: unknown): SteamPriceOverview {
+  try {
+    return priceOverviewSchema.parse(payload);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new Error("Steam вернул ответ priceoverview в неожиданном формате; повторите запрос позже.");
+    }
+    throw error;
+  }
+}
+
+/**
+ * true только для явного отказа Steam: `false`, `0`, `"0"`, `"false"`.
+ * `undefined`/`null` и любые другие значения отказом не считаются.
+ */
+export function steamSuccessIsFalse(value: unknown): boolean {
+  return value === false || value === 0 || value === "0" || value === "false";
+}
 
 export const steamCommunityProvider: Provider = {
   id: "steam-community",
@@ -76,8 +107,9 @@ export const steamCommunityProvider: Provider = {
       const url = `/market/priceoverview/?appid=730&currency=${STEAM_CURRENCY_CODES.USD}&market_hash_name=${encodeURIComponent(name)}`;
       try {
         requests += 1;
-        const payload = priceOverviewSchema.parse(await client.requestJson<unknown>(url));
-        if (!payload.success) {
+        const payload = parseSteamPriceOverview(await client.requestJson<unknown>(url));
+        // Явный отказ (0/false/"false") — пропуск; отсутствие поля решается по lowest_price.
+        if (steamSuccessIsFalse(payload.success)) {
           missing.push(name);
           continue;
         }

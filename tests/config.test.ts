@@ -8,6 +8,8 @@ const ENV_KEYS = [
   "SYNC_TOKEN",
   "API_RATE_LIMIT_PER_MINUTE",
   "STEAM_PRICE_REFRESH_COOLDOWN_SECONDS",
+  "STEAM_SEARCH_PAGES",
+  "STEAM_SEARCH_INTERVAL_MS",
   "SKINBARON_API_KEY",
   "SKINBARON_PRICE_CURRENCY",
   "LISSKINS_PRICE_CURRENCY",
@@ -69,6 +71,8 @@ test("настройки Steam, LIS-SKINS и SkinBaron имеют безопас
   withEnv(
     {
       STEAM_PRICE_REFRESH_COOLDOWN_SECONDS: undefined,
+      STEAM_SEARCH_PAGES: undefined,
+      STEAM_SEARCH_INTERVAL_MS: undefined,
       SKINBARON_API_KEY: undefined,
       SKINBARON_PRICE_CURRENCY: undefined,
       LISSKINS_PRICE_CURRENCY: undefined,
@@ -76,6 +80,8 @@ test("настройки Steam, LIS-SKINS и SkinBaron имеют безопас
     () => {
       const config = getConfig();
       assert.equal(config.STEAM_PRICE_REFRESH_COOLDOWN_SECONDS, 120);
+      assert.equal(config.STEAM_SEARCH_PAGES, 100);
+      assert.equal(config.STEAM_SEARCH_INTERVAL_MS, 3000);
       assert.equal(config.SKINBARON_API_KEY, undefined);
       assert.equal(config.SKINBARON_PRICE_CURRENCY, "EUR");
       assert.equal(config.LISSKINS_PRICE_CURRENCY, "USD");
@@ -84,6 +90,8 @@ test("настройки Steam, LIS-SKINS и SkinBaron имеют безопас
   withEnv(
     {
       STEAM_PRICE_REFRESH_COOLDOWN_SECONDS: "300",
+      STEAM_SEARCH_PAGES: "250",
+      STEAM_SEARCH_INTERVAL_MS: "5000",
       SKINBARON_API_KEY: "example-key",
       SKINBARON_PRICE_CURRENCY: "USD",
       LISSKINS_PRICE_CURRENCY: "EUR",
@@ -91,6 +99,8 @@ test("настройки Steam, LIS-SKINS и SkinBaron имеют безопас
     () => {
       const config = getConfig();
       assert.equal(config.STEAM_PRICE_REFRESH_COOLDOWN_SECONDS, 300);
+      assert.equal(config.STEAM_SEARCH_PAGES, 250);
+      assert.equal(config.STEAM_SEARCH_INTERVAL_MS, 5000);
       assert.equal(config.SKINBARON_API_KEY, "example-key");
       assert.equal(config.SKINBARON_PRICE_CURRENCY, "USD");
       assert.equal(config.LISSKINS_PRICE_CURRENCY, "EUR");
