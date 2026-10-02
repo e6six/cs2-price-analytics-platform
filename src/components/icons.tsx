@@ -28,6 +28,7 @@ export type IconName =
   | "close"
   | "shield"
   | "clock"
+  | "inventory"
   | "chevron-right"
   | "arrow-right"
   | "empty"
@@ -62,6 +63,8 @@ const PATHS: Record<IconName, string[]> = {
   close: ["M6 6l12 12", "M18 6L6 18"],
   shield: ["M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z", "M9 12l2 2 4-4"],
   clock: ["M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z", "M12 8v4.5l3 1.8"],
+  // Инвентарь: контейнер со створкой
+  inventory: ["M4 8.5h16V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z", "M9 8.5V6.5a3 3 0 0 1 6 0v2", "M9.5 12.5h5"],
   "chevron-right": ["M9.5 5.5l6.5 6.5-6.5 6.5"],
   "arrow-right": ["M4.5 12h14", "M13 6.5l5.5 5.5-5.5 5.5"],
   empty: ["M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z", "M7.2 16.8L16.8 7.2"],

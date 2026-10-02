@@ -49,8 +49,20 @@ const envSchema = z.object({
   STEAM_WEB_API_KEY: z.string().optional(),
   /** steamLoginSecure cookie для /market/pricehistory (полная история по предмету). */
   STEAM_MARKET_COOKIE: z.string().optional(),
+  /** Минимальная свежесть перед повторным live-запросом Steam для одного предмета. */
+  STEAM_PRICE_REFRESH_COOLDOWN_SECONDS: z.coerce.number().int().min(30).max(3600).default(120),
+  /** Сколько страниц поиска маркета Steam обходит источник steam-search за прогон (по 10 позиций). */
+  STEAM_SEARCH_PAGES: z.coerce.number().int().min(1).max(5000).default(1000),
+  /** Пауза между страницами поиска Steam, мс: 3000 — вежливый темп без параллельных запросов. */
+  STEAM_SEARCH_INTERVAL_MS: z.coerce.number().int().min(1000).max(60000).default(3000),
   /** CSFloat передаётся опционально: публичные лоты доступны без ключа. */
   CSFLOAT_API_KEY: z.string().optional(),
+  /** Личный API key SkinBaron, создаётся в профиле; нужен для GetExtendedPriceList. */
+  SKINBARON_API_KEY: z.string().optional(),
+  /** Документация SkinBaron не включает валюту в ответ цены: по умолчанию EUR. */
+  SKINBARON_PRICE_CURRENCY: z.enum(["EUR", "USD"]).default("EUR"),
+  /** Валюта экспорта LIS-SKINS (в ответе экспорта поле валюты отсутствует). */
+  LISSKINS_PRICE_CURRENCY: z.enum(["EUR", "USD"]).default("USD"),
   /** DMarket API: публичные лоты доступны без ключа. */
   DMARKET_API_KEY: z.string().optional(),
   /** Buff163 требует авторизованную сессию. */

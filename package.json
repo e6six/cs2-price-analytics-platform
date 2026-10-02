@@ -38,6 +38,7 @@
     "data:fetch": "tsx scripts/data/fetch-sources.ts",
     "data:bootstrap": "tsx scripts/data/build-bootstrap.ts",
     "sync": "tsx scripts/sync.ts",
+    "sync:watch": "tsx scripts/sync-scheduler.ts",
     "verify": "npm run lint && npm run typecheck && npm run test",
     "db:stats": "tsx scripts/db/seed.ts --stats"
   },

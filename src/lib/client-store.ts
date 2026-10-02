@@ -98,4 +98,5 @@ export function useStoredList(key: string): [string[], (updater: (current: strin
 export const STORAGE_KEYS = {
   watchlist: "cs2-index:watchlist",
   theme: "cs2-index:theme",
+  steamId64: "cs2-index:steam-id64",
 } as const;

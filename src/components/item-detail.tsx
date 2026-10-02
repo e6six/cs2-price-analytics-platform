@@ -46,7 +46,33 @@ export function ItemDetailDrawer({
     error: string | null;
   }>({ detail: initial ?? null, requestKey: initial ? `${slug}:365d` : "", error: null });
   const [range, setRange] = useState<Range>("365d");
-  const requestKey = `${slug}:${range}`;
+  const [refreshingSteam, setRefreshingSteam] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
+
+  const refreshSteamPrice = async () => {
+    setRefreshingSteam(true);
+    setRefreshMessage(null);
+    try {
+      const response = await fetch(`/api/items/${encodeURIComponent(slug)}/refresh?range=${range}`, {
+        method: "POST",
+        cache: "no-store",
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        detail?: ItemDetail;
+        refresh?: { message?: string };
+        error?: { message?: string };
+      };
+      if (!response.ok || !payload.detail) {
+        throw new Error(payload.error?.message ?? `HTTP ${response.status}`);
+      }
+      setState({ detail: payload.detail, requestKey: `${slug}:${range}`, error: null });
+      setRefreshMessage(payload.refresh?.message ?? "Ответ Steam получен.");
+    } catch (cause) {
+      setRefreshMessage(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setRefreshingSteam(false);
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -181,7 +207,16 @@ export function ItemDetailDrawer({
                 <PriceChart history={detail.history} height={200} />
               </Panel>
 
-              <Panel title="Котировки площадок" subtitle="Цена покупателя, время снимка и происхождение значения">
+              <Panel
+                title="Котировки площадок"
+                subtitle="Цена покупателя, время снимка и происхождение значения"
+                actions={
+                  <button type="button" className="secondary-button" onClick={() => void refreshSteamPrice()} disabled={refreshingSteam}>
+                    {refreshingSteam ? "Запрашиваю Steam…" : "⟳ Обновить цену Steam"}
+                  </button>
+                }
+              >
+                {refreshMessage ? <p className="muted small" role="status">{refreshMessage}</p> : null}
                 {detail.offers.length === 0 ? (
                   <EmptyState title="Нет котировок" hint="Для предмета ещё не собраны цены подключённых источников" />
                 ) : (

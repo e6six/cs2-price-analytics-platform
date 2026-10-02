@@ -1953,3 +1953,111 @@ h3 {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ------------------------------------------------------------ Инвентарь */
+
+.primary-button {
+  align-self: flex-end;
+  padding: 10px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 11px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--accent) 90%, transparent);
+  color: var(--accent-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: filter 0.16s ease, transform 0.16s ease;
+}
+
+.primary-button:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.primary-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.inventory-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.inventory-id-field {
+  flex: 1;
+  min-width: 220px;
+}
+
+.inventory-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0 12px;
+}
+
+.inventory-search-field {
+  width: min(100%, 340px);
+}
+
+.inventory-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 118px;
+}
+
+.inventory-price strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-price .badge {
+  margin-top: 3px;
+}
+
+.inventory-error {
+  margin-top: 12px;
+  padding: 10px 13px;
+  border: 1px solid color-mix(in srgb, var(--negative) 35%, transparent);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--negative) 8%, transparent);
+  color: var(--negative);
+  font-size: 12px;
+}
+
+.inventory-truncated {
+  margin-bottom: 12px;
+}
+
+.inventory-table td {
+  vertical-align: middle;
+}
+
+@media (max-width: 700px) {
+  .inventory-form,
+  .inventory-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .inventory-id-field,
+  .inventory-search-field {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .inventory-form .primary-button {
+    align-self: stretch;
+  }
+}

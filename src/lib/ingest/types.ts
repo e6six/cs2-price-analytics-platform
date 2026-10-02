@@ -23,6 +23,8 @@ export type ProviderRunContext = {
   /** Верхняя граница числа предметов за прогон (бюджет запросов). */
   limit?: number;
   signal?: AbortSignal;
+  /** Состояние предыдущего прогона источника (курсор, счётчики) для продолжения обхода. */
+  metadata?: Record<string, unknown> | null;
 };
 
 export type ProviderResult = {
@@ -32,6 +34,10 @@ export type ProviderResult = {
   /** Имена предметов, которых не удалось получить (для отчёта о покрытии). */
   missing?: string[];
   notes?: string;
+  /** Состояние для следующего прогона: сохраняется в `cs2_ingest_runs.details.state`. */
+  state?: Record<string, unknown>;
+  /** true, если прогон завершился не полностью (остановка по лимиту/ошибке площадки). */
+  partial?: boolean;
 };
 
 export type Provider = {
@@ -43,6 +49,11 @@ export type Provider = {
   mode: "bulk" | "item";
   /** Требует ли источник учётные данные. */
   requiresCredentials: boolean;
+  /**
+   * false — источник сам обходит каталог и не принимает список имён;
+   * в этом случае `limit` трактуется как бюджет страниц, а не число предметов.
+   */
+  supportsNameFilter?: boolean;
   /** Функция проверки готовности: возвращает причину, если источник выключен. */
   disabledReason?: () => string | null;
   fetchQuotes: (context: ProviderRunContext) => Promise<ProviderResult>;

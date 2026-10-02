@@ -1,9 +1,12 @@
 import type { Provider } from "@/lib/ingest/types";
 import { steamCommunityProvider } from "@/lib/ingest/providers/steam-community";
 import { steamDatasetProvider } from "@/lib/ingest/providers/steam-dataset";
+import { steamSearchProvider } from "@/lib/ingest/providers/steam-search";
 import { skinportProvider } from "@/lib/ingest/providers/skinport";
 import { csfloatProvider } from "@/lib/ingest/providers/csfloat";
 import { buff163Provider } from "@/lib/ingest/providers/buff163";
+import { lisskinsProvider } from "@/lib/ingest/providers/lisskins";
+import { skinbaronProvider } from "@/lib/ingest/providers/skinbaron";
 
 /**
  * Реестр адаптеров. Порядок важен: bulk-источники выполняются раньше
@@ -11,9 +14,12 @@ import { buff163Provider } from "@/lib/ingest/providers/buff163";
  */
 export const providers: Provider[] = [
   steamDatasetProvider,
+  steamSearchProvider,
   skinportProvider,
   csfloatProvider,
   buff163Provider,
+  lisskinsProvider,
+  skinbaronProvider,
   steamCommunityProvider,
 ];
 
@@ -44,4 +50,13 @@ export function listProviderStatus(): Array<{
   });
 }
 
-export { steamCommunityProvider, steamDatasetProvider, skinportProvider, csfloatProvider, buff163Provider };
+export {
+  steamCommunityProvider,
+  steamDatasetProvider,
+  steamSearchProvider,
+  skinportProvider,
+  csfloatProvider,
+  buff163Provider,
+  lisskinsProvider,
+  skinbaronProvider,
+};
