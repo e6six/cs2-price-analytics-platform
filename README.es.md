@@ -73,8 +73,9 @@ Los adaptadores de plataformas comparten un mismo contrato (`src/lib/ingest/prov
 ## Funciones
 
 - **Catálogo** — búsqueda por nombre, filtros (categoría, arma, rareza, colección, desgaste, StatTrak™, Souvenir, rango de precio, solo con precio), 8 ordenaciones y paginación.
-- **Ficha del objeto** — mejor/precio medio/peor, diferencial entre plataformas, variaciones de 7/30/90 días con fechas de comparación, gráfico de historial, tabla de ofertas con procedencia y caducidad, lista de plataformas sin cotización.
+- **Ficha del objeto** — mejor/precio medio/peor, diferencial entre plataformas, variaciones de 7/30/90 días con fechas de comparación, gráfico de historial, tabla de ofertas con procedencia y caducidad, lista de plataformas sin cotización y un botón que trae el `lowest_price` actual de Steam para ese objeto (con enfriamiento `STEAM_PRICE_REFRESH_COOLDOWN_SECONDS`, por defecto 120 s).
 - **Resumen del mercado** — frescura, índice (mediana de la relación de precios de la cesta respecto a la fecha base), amplitud del mercado (suben/bajan/sin cambios), líderes de subida y bajada, objetos más líquidos.
+- **Valoración de inventario** — con un SteamID64 o un enlace `/profiles/…`, el servicio valora un inventario CS2 **público** con precios del Mercado de Steam y de plataformas externas: filtro por lista, orden por importe de la línea y conmutador de base «Steam / externo». El ID se queda en el `localStorage` de ese navegador; la lista de objetos solo vive en memoria del servidor hasta 60 segundos y nunca se guarda en la base de datos.
 - **Directorio de plataformas** — estado de integración, comisiones con estado de verificación, KYC, límites de peticiones, estado del cortacircuitos, número de cotizaciones.
 - **Página de fuentes** — tablas de fuentes y ejecuciones, composición del conjunto bootstrap, licencias y atribución, descargo de responsabilidad.
 - **Calculadora de pago** — cálculo a partir de una cotización real y una comisión elegida explícitamente.
@@ -114,7 +115,9 @@ Lista completa de variables de entorno — [`.env.example`](.env.example). Los s
 | `npm run db:seed -- --stats` | Reconstruir estadísticas materializadas |
 | `npm run data:fetch` | Clonar/actualizar los conjuntos abiertos en `.cache/sources` |
 | `npm run data:bootstrap` | Reconstruir `data/bootstrap/*` y el manifiesto de sumas |
-| `npm run sync -- --source=steam-community --limit=50` | Una ejecución de sincronización |
+| `npm run sync -- --source=steam-community --limit=50` | Una consulta de Steam `priceoverview` para un conjunto pequeño |
+| `npm run sync -- --source=steam-search` | Recorrido de la búsqueda de Steam (precios en vivo); se reanuda desde el cursor guardado, `--limit=N` acota las páginas por ejecución |
+| `npm run sync:watch -- --interval=5` | Worker aparte: refresca las fuentes masivas (Skinport, CSFloat, LIS-SKINS, SkinBaron) cada 5 minutos |
 | `npm run db:studio` | Drizzle Studio |
 
 ## API
@@ -126,6 +129,8 @@ Todas las respuestas son JSON; los errores usan `{ "error": { "code", "message",
 | `GET /api/health` | Estado de la base y los datos: `200` listo, `503` vacío/no disponible, frescura |
 | `GET /api/items` | Catálogo: `q`, `category`, `kind`, `weapon`, `rarity`, `collection`, `wear`, `stattrak`, `souvenir`, `minPrice`, `maxPrice`, `requirePrice`, `slugs` (hasta 60), `sort` (8 valores), `page`, `limit` (≤100) |
 | `GET /api/items/{id\|slug}?range=7d\|30d\|90d\|365d` | Ficha: ofertas, historial, estadísticas |
+| `POST /api/items/{id}/refresh?range=…` | Trae el `lowest_price` actual de Steam para un objeto; aplican el limitador compartido y el enfriamiento |
+| `POST /api/inventory/valuation` | Valora un inventario CS2 público. Cuerpo JSON: `{ "steamId64": "7656119…" }`; devuelve precios por objeto y totales de Steam y externos |
 | `GET /api/items/{id}/history?range=…&market=…` | Serie temporal (la ventana se cuenta desde la última observación del objeto) |
 | `GET /api/markets` | Directorio de plataformas y comisiones |
 | `GET /api/analytics/summary` | Resumen del mercado: frescura, cobertura, índice, amplitud, líderes |

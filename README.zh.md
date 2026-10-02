@@ -73,8 +73,9 @@ CS2 Index 只专注回答一个问题：*这件物品现在值多少、价格如
 ## 功能
 
 - **目录** —— 按名称搜索，支持分类、武器、稀有度、收藏系列、磨损、StatTrak™、纪念品、价格区间、仅有价格等筛选，8 种排序与分页。
-- **物品详情** —— 最低/平均/最高价、跨平台价差、7/30/90 天变化与对照日期、历史走势图、带出处和时效的报价表、未返回报价的平台列表。
+- **物品详情** —— 最低/平均/最高价、跨平台价差、7/30/90 天变化与对照日期、历史走势图、带出处和时效的报价表、未返回报价的平台列表，以及仅针对该物品的 Steam `lowest_price` 拉取按钮（冷却时间 `STEAM_PRICE_REFRESH_COOLDOWN_SECONDS`，默认 120 秒）。
 - **市场总览** —— 数据新鲜度、指数（物品篮子价格相对基准日的比值中位数）、市场宽度（上涨/下跌/持平）、涨跌榜、最具流动性物品。
+- **库存估值** —— 通过 SteamID64 或 `/profiles/…` 链接，用 Steam 市场与外部平台的价格为**公开** CS2 库存估值：支持筛选、按行金额排序，以及「Steam／外部」口径切换。ID 只保存在该浏览器的 `localStorage`，物品列表只在服务器内存中停留不超过 60 秒，不写入数据库。
 - **平台目录** —— 集成状态、带核实状态的手续费、KYC、速率限制、熔断器状态、报价数量。
 - **数据来源页** —— 来源与运行记录表、bootstrap 数据集构成、许可证与署名、免责声明。
 - **到手价计算器** —— 依据真实报价与显式选择的手续费计算。
@@ -114,7 +115,9 @@ npm run build && npm run start
 | `npm run db:seed -- --stats` | 重建物品统计指标 |
 | `npm run data:fetch` | 克隆/更新公开数据集到 `.cache/sources` |
 | `npm run data:bootstrap` | 重建 `data/bootstrap/*` 与校验和清单 |
-| `npm run sync -- --source=steam-community --limit=50` | 单次同步 |
+| `npm run sync -- --source=steam-community --limit=50` | 对少量物品做一次 Steam `priceoverview` 拉取 |
+| `npm run sync -- --source=steam-search` | 遍历 Steam 搜索（实时价格）；再次运行从保存的游标继续，`--limit=N` 限制本次页数 |
+| `npm run sync:watch -- --interval=5` | 独立 worker：每 5 分钟循环刷新批量来源（Skinport、CSFloat、LIS-SKINS、SkinBaron） |
 | `npm run db:studio` | Drizzle Studio |
 
 ## API
@@ -126,6 +129,8 @@ npm run build && npm run start
 | `GET /api/health` | 数据库与数据状态：`200` 就绪、`503` 空/不可用、快照新鲜度 |
 | `GET /api/items` | 目录：`q`、`category`、`kind`、`weapon`、`rarity`、`collection`、`wear`、`stattrak`、`souvenir`、`minPrice`、`maxPrice`、`requirePrice`、`slugs`（最多 60）、`sort`（8 种）、`page`、`limit`（≤100） |
 | `GET /api/items/{id\|slug}?range=7d\|30d\|90d\|365d` | 物品详情：报价、历史、统计 |
+| `POST /api/items/{id}/refresh?range=…` | 为单个物品拉取当前 Steam `lowest_price`；受共享限流器与冷却时间约束 |
+| `POST /api/inventory/valuation` | 为公开 CS2 库存估值。JSON 请求体：`{ "steamId64": "7656119…" }`；返回逐件价格与 Steam、外部平台金额 |
 | `GET /api/items/{id}/history?range=…&market=…` | 时间序列（窗口从该物品最后观测日期向前计算） |
 | `GET /api/markets` | 平台与手续费目录 |
 | `GET /api/analytics/summary` | 市场汇总：新鲜度、覆盖率、指数、宽度、榜单 |
