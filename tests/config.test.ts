@@ -80,7 +80,7 @@ test("настройки Steam, LIS-SKINS и SkinBaron имеют безопас
     () => {
       const config = getConfig();
       assert.equal(config.STEAM_PRICE_REFRESH_COOLDOWN_SECONDS, 120);
-      assert.equal(config.STEAM_SEARCH_PAGES, 100);
+      assert.equal(config.STEAM_SEARCH_PAGES, 1000);
       assert.equal(config.STEAM_SEARCH_INTERVAL_MS, 3000);
       assert.equal(config.SKINBARON_API_KEY, undefined);
       assert.equal(config.SKINBARON_PRICE_CURRENCY, "EUR");
