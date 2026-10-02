@@ -1,6 +1,29 @@
 {
   "name": "cs2-price-analytics-platform",
   "private": true,
+  "description": "Independent price analytics for Counter-Strike 2 items: catalogue, marketplace comparison, weekly history and a provenance-first data pipeline.",
+  "keywords": [
+    "cs2",
+    "counter-strike-2",
+    "skins",
+    "price-analytics",
+    "steam-market",
+    "nextjs",
+    "drizzle-orm",
+    "postgresql",
+    "pglite"
+  ],
+  "homepage": "https://github.com/e6six/cs2-price-analytics-platform#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/e6six/cs2-price-analytics-platform.git"
+  },
+  "bugs": {
+    "url": "https://github.com/e6six/cs2-price-analytics-platform/issues"
+  },
+  "engines": {
+    "node": ">=20.9"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

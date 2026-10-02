@@ -14,6 +14,7 @@ import type {
 import { IndexChart } from "@/components/index-chart";
 import { PriceChart } from "@/components/price-chart";
 import { Badge, Banner, ChangeValue, EmptyState, ItemArt, Panel, StatCard, StatusDot, Tabs } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import {
   categoryLabel,
   feeStatusLabel,
@@ -64,30 +65,34 @@ export function OverviewView({
           ? "Данные устарели: запустите синхронизацию, чтобы обновить цены."
           : "Данные актуальны по политике свежести (14 дней)."}{" "}
         <button type="button" className="link-button" onClick={() => onOpenView("data")}>
-          Источники и лицензии →
+          Источники и лицензии <Icon name="chevron-right" />
         </button>
       </Banner>
 
       <div className="stats-grid">
         <StatCard
+          icon="activity"
           label="Индекс цен"
           value={summary.index.current === null ? "—" : summary.index.current.toFixed(2)}
           change={summary.index.change7d}
           hint={`база 100 · ${formatNumber(summary.index.constituents)} предметов с ${formatDate(summary.index.baseDate)} · за всё время ${formatPercent(summary.index.changeAll)}`}
         />
         <StatCard
+          icon="catalog"
           label="Предметов с ценой"
           value={formatNumber(summary.coverage.itemsWithPrice)}
           hint={`из ${formatNumber(summary.coverage.items)} в каталоге`}
           tone="blue"
         />
         <StatCard
+          icon="trend-up"
           label="Широта рынка"
           value={`${formatNumber(summary.breadth.advancing)} / ${formatNumber(summary.breadth.declining)}`}
           hint="растут / падают (7 дней)"
           tone="violet"
         />
         <StatCard
+          icon="markets"
           label="Площадок с котировками"
           value={formatNumber(summary.coverage.marketsWithQuotes)}
           hint={`${formatNumber(summary.coverage.sourcesLive)} подключено · ${formatNumber(summary.coverage.sourcesPlanned)} в плане`}
@@ -162,7 +167,7 @@ export function OverviewView({
             subtitle="Изменение за 7 дней по истории"
             actions={
               <button type="button" className="link-button" onClick={() => onOpenView("catalog")}>
-                Каталог →
+                Каталог <Icon name="chevron-right" />
               </button>
             }
           >
@@ -180,7 +185,7 @@ export function OverviewView({
         subtitle="Больше всего площадок с котировками и полная история"
         actions={
           <button type="button" className="link-button" onClick={() => onOpenView("markets")}>
-            Площадки →
+            Площадки <Icon name="chevron-right" />
           </button>
         }
       >
@@ -449,13 +454,14 @@ export function CatalogView({
                     <button
                       type="button"
                       className={watchlist.includes(item.slug) ? "watch-button watch-on" : "watch-button"}
-                      title="Добавить в список наблюдения"
+                      title={watchlist.includes(item.slug) ? "Убрать из избранного" : "Добавить в избранное"}
+                      aria-label="Избранное"
                       onClick={(event) => {
                         event.stopPropagation();
                         onToggleWatch(item);
                       }}
                     >
-                      ★
+                      <Icon name="star" />
                     </button>
                   </td>
                 </tr>
@@ -595,10 +601,10 @@ export function DataView({
   return (
     <div className="view-stack">
       <div className="stats-grid">
-        <StatCard label="Возраст данных" value={summary.freshness.ageHours === null ? "—" : `${Math.round(summary.freshness.ageHours / 24)} дн`} hint={formatDate(summary.freshness.latestCapturedAt)} tone="amber" />
-        <StatCard label="Котировок в базе" value={formatNumber(summary.coverage.quotes)} hint={`${formatNumber(summary.coverage.itemsWithPrice)} предметов`} />
-        <StatCard label="Точек истории" value={formatNumber(summary.coverage.historyPoints)} hint={`${formatNumber(summary.coverage.historyItems)} предметов`} tone="blue" />
-        <StatCard label="Источников с данными" value={formatNumber(summary.coverage.marketsWithQuotes)} hint={`${formatNumber(summary.coverage.sourcesLive)} подключено`} tone="violet" />
+        <StatCard icon="clock" label="Возраст данных" value={summary.freshness.ageHours === null ? "—" : `${Math.round(summary.freshness.ageHours / 24)} дн`} hint={formatDate(summary.freshness.latestCapturedAt)} tone="amber" />
+        <StatCard icon="coins" label="Котировок в базе" value={formatNumber(summary.coverage.quotes)} hint={`${formatNumber(summary.coverage.itemsWithPrice)} предметов`} />
+        <StatCard icon="layers" label="Точек истории" value={formatNumber(summary.coverage.historyPoints)} hint={`${formatNumber(summary.coverage.historyItems)} предметов`} tone="blue" />
+        <StatCard icon="data" label="Источников с данными" value={formatNumber(summary.coverage.marketsWithQuotes)} hint={`${formatNumber(summary.coverage.sourcesLive)} подключено`} tone="violet" />
       </div>
 
       <Tabs
@@ -723,7 +729,7 @@ export function DataView({
               <div className="provenance-row">
                 <span>История</span>
                 <strong>
-                  {String(bootstrap.stats.historyFrom ?? "—")} → {String(bootstrap.stats.historyTo ?? "—")} ({formatNumber(Number(bootstrap.stats.historyItems ?? 0))}{" "}
+                  {String(bootstrap.stats.historyFrom ?? "—")} — {String(bootstrap.stats.historyTo ?? "—")} ({formatNumber(Number(bootstrap.stats.historyItems ?? 0))}{" "}
                   предметов)
                 </strong>
               </div>
@@ -813,12 +819,14 @@ export function WatchlistView({
                   <button
                     type="button"
                     className="watch-button watch-on"
+                    title="Убрать из избранного"
+                    aria-label="Убрать из избранного"
                     onClick={(event) => {
                       event.stopPropagation();
                       onRemove(item);
                     }}
                   >
-                    ★
+                    <Icon name="star" />
                   </button>
                 </td>
               </tr>

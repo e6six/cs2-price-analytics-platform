@@ -1,49 +1,98 @@
+<p align="center">
+  <img src="docs/assets/banner.png" alt="CS2 Index — independent price analytics for Counter-Strike 2 items" width="100%">
+</p>
+
+<div align="center">
+
 # CS2 Index
 
-Независимая аналитика цен предметов Counter-Strike 2: каталог на 34 000 позиций, сравнение предложений площадок, история недельных срезов, справочник источников и калькулятор обмена. Next.js (App Router), TypeScript, Drizzle ORM, PostgreSQL (в разработке — встроенный PGlite).
+**Independent price analytics for Counter-Strike 2 items.** A catalogue of 34 029 items, offer comparison across marketplaces, weekly price history, a marketplace directory and a payout calculator — built on open snapshots with provenance for every number.
 
-## Что с данными
+[![Next.js 16](https://img.shields.io/badge/Next.js-16.2-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![TypeScript 5.9](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Drizzle ORM](https://img.shields.io/badge/Drizzle_ORM-0.45-C5F74F?logo=drizzle&logoColor=black)](https://orm.drizzle.team)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![Embedded PGlite](https://img.shields.io/badge/embedded-PGlite-4B5563)](https://pglite.dev)
+[![Tests](https://img.shields.io/badge/tests-16_passing-3FB950)](tests)
+[![Dataset licence MIT](https://img.shields.io/badge/dataset-MIT-2EA44F)](data/bootstrap/manifest.json)
 
-Проект не показывает демонстрационные котировки. В репозитории лежит воспроизводимый снимок открытых данных (`data/bootstrap`, 3,1 МБ, контрольные суммы в манифесте), из которого приложение поднимает базу при первом старте:
+**English** · [Русский](README.ru.md) · [中文](README.zh.md) · [Español](README.es.md)
 
-| Показатель | Значение |
+</div>
+
+---
+
+## What this is — and what it is not
+
+CS2 Index answers a narrow question well: *what is this item worth right now, how did that change, and where does the number come from?*
+
+- **Real snapshot data, not demo quotes.** The repository ships a reproducible open dataset (`data/bootstrap`, 3.1 MB, checksums in the manifest) that the app loads on first start.
+- **No trading, no custody, no accounts.** The service only displays data. It is not affiliated with Valve Corporation.
+- **No invented values.** If there is no quote, the interface shows `—`, never `0` or an estimate.
+
+## Screenshots
+
+| Market overview (dark) | Market overview (light) |
 | --- | --- |
-| Предметы каталога | 34 029 (скины, наклейки, кейсы, агенты, граффити, брелоки, музыкальные наборы, патчи, коллекционные предметы, ключи) |
-| Предложения (котировки) | 27 717 на дату снимка |
-| История | 25 850 предметов × 25 недельных дат (2026-02-08 … 2026-08-08) |
-| Семантика цены | минимальная цена активного лота Steam Community Market, USD |
-| Источники | [ByMykel/CSGO-API](https://github.com/ByMykel/CSGO-API) (MIT) — метаданные; [ByMykel/counter-strike-price-tracker](https://github.com/ByMykel/counter-strike-price-tracker) (MIT) — недельные срезы цен Steam |
+| ![Overview](docs/assets/screens/overview.png) | ![Overview, light theme](docs/assets/screens/overview-light.png) |
 
-Принципы:
+| Catalogue with filters | Item card |
+| --- | --- |
+| ![Catalogue](docs/assets/screens/catalog.png) | ![Item card](docs/assets/screens/item.png) |
 
-- **Происхождение каждой цены фиксируется**: источник, тип цены, валюта, время снимка, ссылка на первоисточник (`cs2_price_quotes.source_url`, таблица `cs2_source_health`, манифест набора).
-- **Отсутствие данных остаётся явным**: нет котировки — нет строки и в интерфейсе стоит «—», а не ноль и не оценка.
-- **Непроверенные комиссии не выдаются за факт**: у площадок в справочнике стоит статус `reported`/`conflicting` со ссылкой и датой проверки, а при `conflicting` проценты вообще не показываются.
-- **Ряд цен, который ведёт себя недостоверно, помечается**: если соседние недельные наблюдения расходятся более чем в 5 раз, изменения не рассчитываются (`change_7d = null`, флаг `changeSuppressed`), чтобы не публиковать «рост на 5000 %» из-за выброса.
-- **Изменения сглаживаются**: текущее значение и точки сравнения (7/30/90 дней) — медианы трёх наблюдений; дата сравнения отдаётся отдельно (`change7dFrom`), потому что набор недельный и «ровно неделю назад» может не существовать.
+| Marketplace directory | Data sources and provenance |
+| --- | --- |
+| ![Markets](docs/assets/screens/markets.png) | ![Data sources](docs/assets/screens/data.png) |
 
-Снимок — это не поток реального времени. Свежесть видна в интерфейсе (бейдж возраста данных) и через `GET /api/health`. Обновлённые данные добавляются синхронизацией (`npm run sync`, `POST /api/sync`) из поддерживаемых источников.
+## The data behind the interface
 
-## Возможности
+| Metric | Value |
+| --- | --- |
+| Catalogue items | 34 029 — skins, stickers, cases, agents, graffiti, charms, music kits, patches, collectibles, keys |
+| Offers (quotes) | 27 717 on the snapshot date |
+| History | 25 850 items × 25 weekly dates (2026-02-08 … 2026-08-08), 631 840 points |
+| Price semantics | lowest price of an active Steam Community Market listing, USD |
+| Sources | [ByMykel/CSGO-API](https://github.com/ByMykel/CSGO-API) (MIT) — metadata; [ByMykel/counter-strike-price-tracker](https://github.com/ByMykel/counter-strike-price-tracker) (MIT) — weekly Steam price snapshots |
 
-- Каталог: поиск по имени, фильтры (категория, оружие, редкость, коллекция, износ, StatTrak™, Souvenir, диапазон цен, только с ценой), 8 сортировок, пагинация.
-- Карточка предмета: лучшая/средняя/худшая цена, спред по площадкам, изменения 7/30/90 дней с датами сравнения, график истории, таблица предложений с происхождением и устареванием, список площадок без котировок.
-- Обзор рынка: свежесть данных, индекс (медиана отношений цен корзины предметов с историей), ширина рынка (растущие/падающие/без изменений), лидеры роста и падения, самые ликвидные предметы.
-- Справочник площадок: статус интеграции, комиссии со статусом проверки, KYC, лимиты запросов, состояние предохранителя (circuit breaker), количество котировок.
-- Источники данных: таблица источников и прогонов, состав набора bootstrap, лицензии и атрибуция, дисклеймер.
-- Избранное (`localStorage`), светлая/тёмная тема, адаптивная вёрстка на русском.
-- API с единым конвертом ошибок, лимитом частоты, кэшированием и метриками Prometheus.
+Principles the code actually enforces:
 
-## Быстрый старт
+- **Every price keeps its provenance** — source, price kind, currency, capture time, link to the original (`cs2_price_quotes.source_url`, table `cs2_source_health`, dataset manifest).
+- **Missing data stays explicit** — no quote, no row; the UI shows `—` instead of a zero or a guess.
+- **Unverified fees are never stated as fact** — marketplaces carry a `reported` / `conflicting` fee status with a source link and a verification date; when the status is `conflicting`, the percentages are not shown at all.
+- **Unreliable series are flagged, not smoothed into fiction** — if adjacent weekly observations differ by more than 5×, changes are not calculated (`change_7d = null`, flag `changeSuppressed`).
+- **Changes are smoothed, dates are explicit** — the current value and 7/30/90-day comparison points are medians of three observations; the comparison date is returned separately (`change7dFrom`), because the dataset is weekly and "exactly a week ago" may not exist.
+
+The snapshot is not a real-time stream. Freshness is visible in the UI (data age badge) and via `GET /api/health`. Updated data arrives through synchronisation (`npm run sync`, `POST /api/sync`) from supported sources.
+
+## Architecture
+
+<img src="docs/assets/architecture.png" alt="Data flow: open sources → ingest → storage → API and UI" width="100%">
+
+Adapters for marketplaces share one contract (`src/lib/ingest/providers`), the runner keeps a per-source circuit breaker and a run journal, and materialised item statistics (`refreshItemStats`) are rebuilt in one pass after import and after every sync — so the catalogue and the overview never run window functions over the whole history per request.
+
+## Features
+
+- **Catalogue** — search by name, filters (category, weapon, rarity, collection, wear, StatTrak™, Souvenir, price range, priced-only), 8 sort orders, pagination.
+- **Item card** — best/average/worst price, spread across marketplaces, 7/30/90-day changes with comparison dates, history chart, offer table with provenance and staleness, list of marketplaces that returned no quote.
+- **Market overview** — data freshness, index (median ratio of basket prices to the base date), market breadth (advancing / declining / flat), top gainers and losers, most liquid items.
+- **Marketplace directory** — integration status, fee status with verification date, KYC, rate limits, circuit-breaker state, quote counts.
+- **Data sources page** — source and run tables, bootstrap dataset composition, licences and attribution, disclaimer.
+- **Payout calculator** — computes the payout from a real quote and an explicitly chosen fee.
+- **Interface** — light and dark theme with no flash on load, locally hosted Inter (latin + cyrillic), `/` focuses search, responsive layout, Russian localisation, watchlist in `localStorage`.
+- **API** — unified error envelope, rate limiting, caching and Prometheus metrics.
+
+## Quick start
 
 ```bash
+git clone https://github.com/e6six/cs2-price-analytics-platform.git
+cd cs2-price-analytics-platform
 npm install
 npm run dev          # http://localhost:3000
 ```
 
-Без `DATABASE_URL` приложение поднимает встроенный PostgreSQL (PGlite) в `.cache/pglite`, применяет миграции и импортирует набор из `data/bootstrap` — первый запуск занимает ~1,5–2 минуты, дальше база уже на диске.
+Without `DATABASE_URL` the app starts an embedded PostgreSQL (PGlite) in `.cache/pglite`, applies migrations and imports the dataset from `data/bootstrap`. The first start takes about a minute or two; later starts reuse the database on disk.
 
-Production-режим:
+Production mode:
 
 ```bash
 export DATABASE_URL=postgresql://cs2:cs2@127.0.0.1:5432/cs2_index
@@ -51,88 +100,110 @@ npm run db:migrate && npm run db:seed -- --refresh
 npm run build && npm run start
 ```
 
-Полный список переменных окружения — в [`.env.example`](.env.example). Секреты (токены площадок, `SYNC_TOKEN`) хранятся только в окружении.
+Full list of environment variables — [`.env.example`](.env.example). Secrets (marketplace tokens, `SYNC_TOKEN`) live only in the environment.
 
-## Скрипты
+### Configuration highlights
 
-| Команда | Назначение |
+| Variable | Purpose |
 | --- | --- |
-| `npm run dev` / `build` / `start` | Разработка, сборка, запуск production-сервера |
-| `npm run lint` / `typecheck` / `test` / `verify` | ESLint, TypeScript, тесты (node:test), всё вместе |
-| `npm run db:migrate` | Применить миграции Drizzle |
-| `npm run db:seed` | Импортировать набор при пустой базе (идемпотентно) |
-| `npm run db:seed -- --refresh` | Принудительный переимпорт `data/bootstrap` (котировки, история, метаданные, показатели) |
-| `npm run db:seed -- --stats` | Пересобрать материализованные показатели предметов |
-| `npm run db:seed -- --sources` | Обновить справочник источников |
-| `npm run data:fetch` | Склонировать/обновить открытые датасеты в `.cache/sources` |
-| `npm run data:bootstrap` | Пересобрать `data/bootstrap/*` и манифест с контрольными суммами |
-| `npm run sync -- --source=steam-community --limit=50` | Разовый прогон синхронизации |
+| `DATABASE_URL`, `DATABASE_DRIVER`, `PGLITE_DATA_DIR` | Managed PostgreSQL or embedded PGlite |
+| `AUTO_MIGRATE`, `AUTO_BOOTSTRAP`, `BOOTSTRAP_DIR` | Migrations and dataset import on start |
+| `SYNC_TOKEN`, `ALLOW_ANONYMOUS_SYNC`, `SYNC_MAX_ITEMS` | Synchronisation endpoint and its limits |
+| `STEAM_MARKET_COOKIE`, `CSFLOAT_API_KEY`, `BUFF_COOKIE`, `GITHUB_TOKEN` | Per-source credentials (all optional) |
+| `API_RATE_LIMIT_PER_MINUTE`, `API_CACHE_TTL_SECONDS` | Public API protection |
+| `QUOTE_RETENTION_DAYS`, `LOG_LEVEL` | Retention and logging |
+
+## Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` / `build` / `start` | Development, build, production server |
+| `npm run lint` / `typecheck` / `test` / `verify` | ESLint, TypeScript, tests (node:test), all together |
+| `npm run db:migrate` | Apply Drizzle migrations |
+| `npm run db:seed` | Import the dataset into an empty database (idempotent) |
+| `npm run db:seed -- --refresh` | Force re-import of `data/bootstrap` (quotes, history, metadata, stats) |
+| `npm run db:seed -- --stats` | Rebuild materialised item statistics |
+| `npm run db:seed -- --sources` | Refresh the source directory |
+| `npm run data:fetch` | Clone/update the open datasets into `.cache/sources` |
+| `npm run data:bootstrap` | Rebuild `data/bootstrap/*` and the checksum manifest |
+| `npm run sync -- --source=steam-community --limit=50` | One-off synchronisation run |
 | `npm run db:studio` | Drizzle Studio |
 
 ## API
 
-Все ответы — JSON, ошибки — `{ "error": { "code", "message", "details" }, "requestId" }`, заголовки `x-request-id`, `cache-control`.
+All responses are JSON; errors use `{ "error": { "code", "message", "details" }, "requestId" }` with `x-request-id` and `cache-control` headers.
 
-| Метод и путь | Назначение |
+| Method and path | Purpose |
 | --- | --- |
-| `GET /api/health` | Состояние базы и данных: `200` ready, `503` empty/unavailable, свежесть снимка |
-| `GET /api/items` | Каталог: `q`, `category`, `kind`, `weapon`, `rarity`, `collection`, `wear`, `stattrak`, `souvenir`, `minPrice`, `maxPrice`, `requirePrice`, `slugs` (до 60), `sort` (8 значений), `page`, `limit` (≤100) |
-| `GET /api/items/{id\|slug}?range=7d\|30d\|90d\|365d` | Карточка предмета: предложения, история, показатели |
-| `GET /api/items/{id}/history?range=…&market=…` | Временной ряд (окно отсчитывается от последней даты наблюдений предмета) |
-| `GET /api/markets` | Справочник площадок и комиссий |
-| `GET /api/analytics/summary` | Сводка рынка: свежесть, покрытие, индекс, ширина, лидеры |
-| `GET /api/facets` | Значения фильтров с количеством предметов |
-| `GET /api/sources` | Статусы источников и последние прогоны |
-| `GET /api/metrics` | Метрики Prometheus (`cs2_db_up`, `cs2_items_total`, `cs2_data_age_hours`, `cs2_market_index`, …) |
-| `GET /api/sync` / `POST /api/sync` | Статус синхронизации / запуск (`Authorization: Bearer $SYNC_TOKEN`) |
+| `GET /api/health` | Database and data state: `200` ready, `503` empty/unavailable, snapshot freshness |
+| `GET /api/items` | Catalogue: `q`, `category`, `kind`, `weapon`, `rarity`, `collection`, `wear`, `stattrak`, `souvenir`, `minPrice`, `maxPrice`, `requirePrice`, `slugs` (up to 60), `sort` (8 values), `page`, `limit` (≤100) |
+| `GET /api/items/{id\|slug}?range=7d\|30d\|90d\|365d` | Item card: offers, history, statistics |
+| `GET /api/items/{id}/history?range=…&market=…` | Time series (the window counts back from the item's latest observation) |
+| `GET /api/markets` | Marketplace and fee directory |
+| `GET /api/analytics/summary` | Market summary: freshness, coverage, index, breadth, leaders |
+| `GET /api/facets` | Filter values with item counts |
+| `GET /api/sources` | Source states and recent runs |
+| `GET /api/metrics` | Prometheus metrics (`cs2_db_up`, `cs2_items_total`, `cs2_data_age_hours`, `cs2_market_index`, …) |
+| `GET /api/sync` / `POST /api/sync` | Sync status / run (`Authorization: Bearer $SYNC_TOKEN`) |
 
-## Схема данных
+## Data model
 
 `src/db/schema.ts`:
 
-- `cs2_markets` — справочник площадок и датасетов: статус интеграции, требуется ли ключ, семантика цены, комиссии со статусом проверки, KYC, лимиты.
-- `cs2_items` — канонические предметы (`market_hash_name`, метаданные, изображение, `popularity` = доля дат с ценой).
-- `cs2_price_quotes` — снимки предложений: `price_kind`, цена, валюта, `price_usd`, `captured_at`, `source_url`, `is_live`.
-- `cs2_price_history_daily` — дневные/недельные ряды (уникальность `item + market + date + price_kind`).
-- `cs2_item_stats` — материализованные показатели предмета: лучшая/средняя цена, площадка-лидер, сглаженные изменения 7/30/90 дней с датами сравнения, покрытие истории, флаг `series_noisy`.
-- `cs2_ingest_runs`, `cs2_source_health` — журнал прогонов и состояние источников (предохранитель, ошибки, счётчики).
-- `cs2_fx_rates` — курсы ЕЦБ для нормализации валют (fallback — статические значения с пометкой `static`).
+- `cs2_markets` — marketplace and dataset directory: integration status, whether a key is required, price semantics, fees with verification status, KYC, limits.
+- `cs2_items` — canonical items (`market_hash_name`, metadata, image, `popularity` = share of dates with a price).
+- `cs2_price_quotes` — offer snapshots: `price_kind`, price, currency, `price_usd`, `captured_at`, `source_url`, `is_live`.
+- `cs2_price_history_daily` — daily/weekly series (unique on `item + market + date + price_kind`).
+- `cs2_item_stats` — materialised item metrics: best/average price, leading marketplace, smoothed 7/30/90-day changes with comparison dates, history coverage, `series_noisy` flag.
+- `cs2_ingest_runs`, `cs2_source_health` — run journal and source state (circuit breaker, errors, counters).
+- `cs2_fx_rates` — ECB rates for currency normalisation (fallback: static values marked `static`).
 
-Показатели пересобираются одним проходом (`refreshItemStats`) после импорта и каждой синхронизации, поэтому каталог и сводка не выполняют оконные функции по всей истории на каждый запрос.
+## Sources, limits and compliance
 
-## Источники и соблюдение правил
+- **Steam Community Market** — public `market/priceoverview` endpoint; the adapter keeps ≤12 requests/min, honours `Retry-After`, uses backoff and a circuit breaker. Full history (`market/pricehistory`) requires the cookie of the account owner — set via `STEAM_MARKET_COOKIE`.
+- **Skinport** — public `/v1/items` API (USD, `tradable`), 5-minute cache, recommended ≤8 requests per 5 minutes.
+- **CSFloat** — public `listings/price-list`; with a key the limits are higher.
+- **BUFF163** — authorised session only (`BUFF_COOKIE`), CNY, ≤10 requests/min.
+- **Open datasets** (GitHub, MIT) — bulk price and metadata refresh through the Contents API.
+- **Planned marketplaces** (DMarket, SkinBaron, Tradeit, LIS-SKINS, SkinsMonkey) exist only in the directory: adapters are not connected until API terms are confirmed.
 
-- **Steam Community Market** — публичный эндпоинт `market/priceoverview`; адаптер держит ≤12 запросов/мин, уважает `Retry-After`, использует backoff и предохранитель. Полная история (`market/pricehistory`) доступна только с cookie владельца аккаунта — переменная `STEAM_MARKET_COOKIE` задаётся оператором.
-- **Skinport** — публичный API `/v1/items` (курс USD, `tradable`), кэш 5 минут, рекомендация — не чаще 8 запросов за 5 минут.
-- **CSFloat** — публичный `listings/price-list`; с ключом лимиты выше.
-- **BUFF163** — только авторизованная сессия (`BUFF_COOKIE`), CNY, ≤10 запросов/мин.
-- **Открытые датасеты** (GitHub, MIT) — массовое обновление цен и метаданных через Contents API.
-- Планируемые площадки (DMarket, SkinBaron, Tradeit, LIS-SKINS, SkinsMonkey) присутствуют только в справочнике: адаптеры не подключены, пока не подтверждены условия API.
+Project rules: no bypassing CAPTCHA, Cloudflare, authorisation or anti-bot protection; no proxies to dodge rate limits; unverified fees, payouts and KYC are never stated as fact; missing data is never replaced with an estimate; marketplace data is not republished without permission from its terms.
 
-Правила проекта: не обходить CAPTCHA, Cloudflare, авторизацию и антибот-защиту; не использовать прокси для уклонения от лимитов; не выдавать непроверенные комиссии, выплаты и KYC за факт; не подменять отсутствие данных оценкой; не перепубликовать данные площадок без разрешения их условий.
+## Operations
 
-## Эксплуатация
+- **Freshness**: `GET /api/health` and the `cs2_data_age_hours` metric (`isStale` — older than 14 days). The UI marks data as stale.
+- **Synchronisation**: `npm run sync` or `POST /api/sync` with `SYNC_TOKEN`; for scheduled refreshes use cron or a worker (`AUTO_BOOTSTRAP=true` is only needed for the first start).
+- **Observability**: structured JSON logs, `GET /api/metrics` (Prometheus).
+- **Rate limiting**: currently in-process — with several replicas you need Redis or a gateway with rate limiting in front.
+- **Backups**: for PGlite an archive of the `.cache/pglite` directory is enough; for PostgreSQL use the usual backup procedures.
+- **Retention**: `QUOTE_RETENTION_DAYS` bounds how long old offer snapshots are kept.
 
-- **Свежесть**: `GET /api/health` и метрика `cs2_data_age_hours` (`isStale` — старше 14 дней). Данные помечаются как устаревшие в интерфейсе.
-- **Синхронизация**: `npm run sync` или `POST /api/sync` с `SYNC_TOKEN`; для регулярного обновления используйте cron/worker (`AUTO_BOOTSTRAP=true` нужен только для первого старта).
-- **Наблюдаемость**: структурные JSON-логи, `GET /api/metrics` (Prometheus).
-- **Ограничение частоты**: сейчас в памяти процесса — при нескольких репликах нужен Redis или шлюз с rate limiting на своей стороне.
-- **Бэкапы**: для PGlite достаточно архива каталога `.cache/pglite`; для PostgreSQL — обычные процедуры резервного копирования.
-- **Ретенция**: `QUOTE_RETENTION_DAYS` ограничивает хранение старых снимков предложений.
+## Limitations
 
-## Ограничения
+- The bundled dataset contains weekly snapshots; "7-day change" means the closest available observation, and the date is always returned by the API.
+- Souvenir items in open datasets more often contain outliers — such series are flagged as unstable rather than "fixed" by eye.
+- No trading operations, no custody of funds, no Steam authentication and no notifications: the service only displays data. Not affiliated with Valve Corporation.
+- Valve localisations are not connected: item names stay in their canonical English form.
+- `steam-community` in the current dataset is marked `isLive: false` — it is a dataset snapshot, not a request to Steam at render time.
+- Item images are loaded from Valve's CDN and are not bundled; when the CDN is unreachable, cards fall back to a rarity-coloured monogram.
 
-- Данные набора — недельные срезы; «изменение за 7 дней» на таком наборе означает ближайшее доступное наблюдение, дата всегда отдаётся в API.
-- Сувенирные предметы в открытых датасетах чаще содержат выбросы — такие ряды помечаются как неустойчивые, а не «исправляются» на глаз.
-- Нет торговых операций, хранения средств, аутентификации Steam и уведомлений: сервис только показывает данные. Не аффилирован с Valve Corporation.
-- Локализации Valve не подключены: названия предметов в канонической англоязычной форме.
-- `steam-community` в текущем наборе помечен `isLive: false` — это снимок датасета, а не запрос к Steam в момент отображения.
+## Design and documentation assets
 
-## Лицензии и атрибуция
+- The design system lives in [`src/app/globals.css`](src/app/globals.css) — tokens for both themes, surfaces, typography and states; interface icons are inline SVG in [`src/components/icons.tsx`](src/components/icons.tsx).
+- All images used by the README (`docs/assets`) are generated from real application markup and dataset values; screenshots are taken from a running instance.
 
-Код проекта распространяется в рамках репозитория. Данные:
+## Licence and attribution
+
+The project code is distributed within this repository. Data:
 
 - [ByMykel/CSGO-API](https://github.com/ByMykel/CSGO-API) — MIT, Copyright (c) 2023 ByMykel.
 - [ByMykel/counter-strike-price-tracker](https://github.com/ByMykel/counter-strike-price-tracker) — MIT, Copyright (c) 2026 ByMykel.
+- Inter typeface — SIL Open Font License 1.1 (`src/fonts/inter/LICENSE.txt`).
 
-Коммиты, использованные для сборки набора, зафиксированы в `data/bootstrap/manifest.json` вместе с контрольными суммами артефактов. Названия и изображения предметов принадлежат Valve Corporation; проект не претендует на права на них.
+The commits used to build the dataset are pinned in `data/bootstrap/manifest.json` together with artifact checksums. Item names and images belong to Valve Corporation; the project claims no rights to them.
+
+<div align="center">
+
+**English** · [Русский](README.ru.md) · [中文](README.zh.md) · [Español](README.es.md)
+
+</div>
