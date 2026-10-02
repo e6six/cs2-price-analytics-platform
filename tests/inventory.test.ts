@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ZodError } from "zod";
 import type { InventoryItemView, InventoryPriceView } from "@/lib/analytics/types";
 import {
   calculateInventoryTotals,
@@ -85,6 +86,48 @@ test("Steam quote cooldown reuses recent snapshots and exposes remaining time", 
   assert.deepEqual(getSteamRefreshCooldown(recent, 120, now), { reuse: true, remainingSeconds: 90 });
   assert.deepEqual(getSteamRefreshCooldown(new Date(now - 120_000), 120, now), { reuse: false, remainingSeconds: 0 });
   assert.deepEqual(getSteamRefreshCooldown(null, 120, now), { reuse: false, remainingSeconds: 0 });
+});
+
+test("Steam inventory parser принимает success числом и строкой, а не только boolean", () => {
+  const numeric = parseSteamInventoryPage({
+    success: 1,
+    assets: [{ assetid: 1, classid: "2" }],
+    descriptions: [],
+    more_items: "0",
+  });
+  assert.equal(numeric.assets.length, 1);
+  assert.equal(numeric.success, 1);
+
+  const stringFlag = parseSteamInventoryPage({ success: "true" });
+  assert.equal(stringFlag.assets.length, 0);
+  assert.equal(stringFlag.descriptions.length, 0);
+
+  // Отсутствие success — не отказ: страница данных остаётся валидной.
+  const missing = parseSteamInventoryPage({ assets: [] });
+  assert.equal(missing.assets.length, 0);
+});
+
+test("Steam inventory parser различает закрытый профиль и прочий отказ Steam", () => {
+  assert.throws(
+    () => parseSteamInventoryPage({ success: 0, Error: "This profile is private." }),
+    PrivateSteamInventoryError,
+  );
+
+  assert.throws(
+    () => parseSteamInventoryPage({ success: 0, error: "Inventory unavailable for this account." }),
+    (error: unknown) =>
+      error instanceof Error &&
+      !(error instanceof ZodError) &&
+      error.message.includes("Inventory unavailable for this account."),
+  );
+});
+
+test("Steam inventory parser не отдаёт наружу сырой ZodError", () => {
+  assert.throws(
+    () => parseSteamInventoryPage({ assets: "not-an-array" }),
+    (error: unknown) =>
+      error instanceof Error && !(error instanceof ZodError) && error.message.includes("неожиданном формате"),
+  );
 });
 
 test("Steam inventory page parser tolerates null optional fields and detects private profiles", () => {

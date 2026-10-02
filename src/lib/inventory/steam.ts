@@ -32,7 +32,8 @@ const descriptionSchema = z
   .passthrough();
 const inventoryPageSchema = z
   .object({
-    success: z.boolean().optional(),
+    // Steam отдаёт success то boolean, то числом 1/0, то строкой — принимаем все варианты.
+    success: flagSchema.nullable().optional(),
     assets: z.array(assetSchema).optional().default([]),
     descriptions: z.array(descriptionSchema).optional().default([]),
     more_items: flagSchema.nullable().optional(),
@@ -71,12 +72,25 @@ export class PrivateSteamInventoryError extends Error {
 }
 
 export function parseSteamInventoryPage(payload: unknown): z.infer<typeof inventoryPageSchema> {
-  const page = inventoryPageSchema.parse(payload);
+  let page: z.infer<typeof inventoryPageSchema>;
+  try {
+    page = inventoryPageSchema.parse(payload);
+  } catch (error) {
+    // Сырой ZodError не должен утекать в API-ответ и UI: Steam меняет формат
+    // полей, и пользователю нужна понятная причина, а не список issue.
+    if (error instanceof z.ZodError) {
+      throw new Error("Steam вернул ответ инвентаря в неожиданном формате; повторите запрос позже.");
+    }
+    throw error;
+  }
+
   const pageError = page.error ?? page.Error ?? null;
-  if (page.success === false && /private|not public|не открыт/i.test(pageError ?? "")) {
+  // Отсутствие success не отказ: решение принимается по содержимому страницы.
+  const success = page.success == null ? true : flag(page.success);
+  if (!success && /private|not public|не открыт/i.test(pageError ?? "")) {
     throw new PrivateSteamInventoryError();
   }
-  if (page.success === false || pageError) {
+  if (!success || pageError) {
     throw new Error(pageError || "Steam не вернул публичный CS2-инвентарь.");
   }
   return page;

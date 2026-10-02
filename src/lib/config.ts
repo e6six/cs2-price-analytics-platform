@@ -51,6 +51,10 @@ const envSchema = z.object({
   STEAM_MARKET_COOKIE: z.string().optional(),
   /** Минимальная свежесть перед повторным live-запросом Steam для одного предмета. */
   STEAM_PRICE_REFRESH_COOLDOWN_SECONDS: z.coerce.number().int().min(30).max(3600).default(120),
+  /** Сколько страниц поиска маркета Steam обходит источник steam-search за прогон (по 100 позиций). */
+  STEAM_SEARCH_PAGES: z.coerce.number().int().min(1).max(1000).default(100),
+  /** Пауза между страницами поиска Steam, мс: 3000 — вежливый темп без параллельных запросов. */
+  STEAM_SEARCH_INTERVAL_MS: z.coerce.number().int().min(1000).max(60000).default(3000),
   /** CSFloat передаётся опционально: публичные лоты доступны без ключа. */
   CSFLOAT_API_KEY: z.string().optional(),
   /** Личный API key SkinBaron, создаётся в профиле; нужен для GetExtendedPriceList. */

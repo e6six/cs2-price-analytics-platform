@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { Database } from "@/db";
 import { ingestRuns, items, markets, priceHistoryDaily, priceQuotes, sourceHealth } from "@/db/schema";
 import { getConfig } from "@/lib/config";
@@ -266,7 +266,7 @@ async function runProvider(db: Database, provider: Provider, options: SyncOption
           .limit(limit);
         marketHashNames = rows.map((row) => row.marketHashName);
       }
-    } else if (options.limit && options.limit > 0) {
+    } else if (provider.supportsNameFilter !== false && options.limit && options.limit > 0) {
       const rows = await db
         .select({ marketHashName: items.marketHashName })
         .from(items)
@@ -275,10 +275,38 @@ async function runProvider(db: Database, provider: Provider, options: SyncOption
       marketHashNames = rows.map((row) => row.marketHashName);
     }
 
-    const result = await provider.fetchQuotes({ marketHashNames, limit: options.limit, signal: options.signal });
+    // Источники с продолжением (например, steam-search) получают состояние
+    // предыдущего успешного/частичного прогона, чтобы обход шёл с курсора.
+    const [previousRun] = await db
+      .select({ details: ingestRuns.details })
+      .from(ingestRuns)
+      .where(
+        and(
+          eq(ingestRuns.sourceId, provider.id),
+          inArray(ingestRuns.status, ["success", "partial"]),
+        ),
+      )
+      .orderBy(desc(ingestRuns.id))
+      .limit(1);
+    const previousState =
+      previousRun?.details && typeof previousRun.details === "object" && !Array.isArray(previousRun.details)
+        ? (previousRun.details as Record<string, unknown>).state
+        : null;
+    const metadata =
+      previousState && typeof previousState === "object" && !Array.isArray(previousState)
+        ? (previousState as Record<string, unknown>)
+        : null;
+
+    const result = await provider.fetchQuotes({
+      marketHashNames,
+      limit: options.limit,
+      signal: options.signal,
+      metadata,
+    });
     const { inserted, unmatched } = await persistQuotes(db, run.id, result.quotes);
     const missing = result.missing?.length ?? 0;
-    const status: "success" | "partial" = unmatched > 0 || missing > 0 ? "partial" : "success";
+    const status: "success" | "partial" =
+      result.partial || unmatched > 0 || missing > 0 ? "partial" : "success";
 
     await db
       .update(ingestRuns)
@@ -291,11 +319,19 @@ async function runProvider(db: Database, provider: Provider, options: SyncOption
         itemsUnmatched: unmatched + missing,
         quotesInserted: inserted,
         message: result.notes ?? null,
-        details: { missing: result.missing?.slice(0, 50) ?? [] },
+        details: {
+          missing: result.missing?.slice(0, 50) ?? [],
+          ...(result.state ? { state: result.state } : {}),
+        },
       })
       .where(eq(ingestRuns.id, run.id));
 
-    await updateHealth(db, provider.id, { success: true, quoteCount: inserted });
+    // Остановка на 429/403 или незавершённый обход — не успех источника.
+    await updateHealth(db, provider.id, {
+      success: status === "success",
+      quoteCount: inserted,
+      ...(status === "success" ? {} : { error: result.notes ?? "прогон завершён частично" }),
+    });
 
     return {
       sourceId: provider.id,
