@@ -11,6 +11,7 @@ import type {
   IngestRunView,
   MarketDirectoryEntry,
 } from "@/lib/analytics/types";
+import { IndexChart } from "@/components/index-chart";
 import { PriceChart } from "@/components/price-chart";
 import { Badge, Banner, ChangeValue, EmptyState, ItemArt, Panel, StatCard, StatusDot, Tabs } from "@/components/ui";
 import {
@@ -72,7 +73,7 @@ export function OverviewView({
           label="Индекс цен"
           value={summary.index.current === null ? "—" : summary.index.current.toFixed(2)}
           change={summary.index.change7d}
-          hint={`база 100 · ${formatNumber(summary.index.constituents)} предметов с ${formatDate(summary.index.baseDate)}`}
+          hint={`база 100 · ${formatNumber(summary.index.constituents)} предметов с ${formatDate(summary.index.baseDate)} · за всё время ${formatPercent(summary.index.changeAll)}`}
         />
         <StatCard
           label="Предметов с ценой"
@@ -93,6 +94,13 @@ export function OverviewView({
           tone="amber"
         />
       </div>
+
+      <Panel
+        title="Индекс рынка"
+        subtitle="Медиана отношений цен корзины предметов к базовой дате; устойчив к выбросам отдельных рядов"
+      >
+        <IndexChart series={summary.index.series} />
+      </Panel>
 
       <div className="overview-grid">
         <Panel

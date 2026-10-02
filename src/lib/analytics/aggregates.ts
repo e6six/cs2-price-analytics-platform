@@ -59,27 +59,45 @@ export async function getAnalyticsSummary(db: Database): Promise<AnalyticsSummar
     `,
   );
 
-  // Индекс и динамика считаются по материализованным показателям: это медианы
-  // отношений, устойчивые к выбросам и не зависящие от числа предметов.
-  const [indexRow] = await fetchRows<{
-    current: string | null;
-    change_7d: string | null;
-    change_30d: string | null;
-    base_date: string | null;
-    constituents: number;
-  }>(
+  // Ряд индекса: для каждой даты — медиана отношений цены предмета к его первой
+  // цене (база 100). Медиана устойчива к выбросам, а сам ряд строится одним
+  // проходом по истории с соединением по первичному ключу показателей.
+  const indexSeries = await fetchRows<{ recorded_on: string; value: string }>(
     db,
     sql`
-      select
-        percentile_cont(0.5) within group (order by last_price_usd / nullif(first_price_usd, 0)) * 100 as current,
-        percentile_cont(0.5) within group (order by change_7d) as change_7d,
-        percentile_cont(0.5) within group (order by change_30d) as change_30d,
-        min(history_from) as base_date,
-        count(*)::int as constituents
+      select h.recorded_on,
+             percentile_cont(0.5) within group (order by h.price_usd / s.first_price_usd) * 100 as value
+      from cs2_price_history_daily h
+      join cs2_item_stats s on s.item_id = h.item_id
+      where s.first_price_usd > 0 and s.history_points >= 4
+      group by h.recorded_on
+      order by h.recorded_on asc
+    `,
+  );
+
+  const series = indexSeries.map((row) => ({
+    date: String(row.recorded_on).slice(0, 10),
+    value: Number(Number(row.value).toFixed(3)),
+  }));
+  const lastPoint = series.at(-1) ?? null;
+  const firstPoint = series[0] ?? null;
+
+  const changeOverDays = (days: number): number | null => {
+    if (!lastPoint) return null;
+    const cutoff = new Date(new Date(`${lastPoint.date}T00:00:00Z`).getTime() - days * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const reference = [...series].reverse().find((point) => point.date <= cutoff);
+    if (!reference || reference.value <= 0) return null;
+    return Number((((lastPoint.value - reference.value) / reference.value) * 100).toFixed(3));
+  };
+
+  const [constituentsRow] = await fetchRows<{ constituents: number }>(
+    db,
+    sql`
+      select count(*)::int as constituents
       from cs2_item_stats
-      where history_points >= 4
-        and first_price_usd > 0
-        and last_price_usd is not null
+      where history_points >= 4 and first_price_usd > 0
     `,
   );
 
@@ -106,7 +124,6 @@ export async function getAnalyticsSummary(db: Database): Promise<AnalyticsSummar
 
   const latestCapturedAt = toIso(freshnessRow?.latest_captured_at ?? null);
   const ageHours = latestCapturedAt ? (Date.now() - new Date(latestCapturedAt).getTime()) / 3_600_000 : null;
-  const indexCurrent = toNumber(indexRow?.current);
 
   return {
     freshness: {
@@ -126,12 +143,16 @@ export async function getAnalyticsSummary(db: Database): Promise<AnalyticsSummar
       sourcesPlanned: coverageRow?.planned_sources ?? 0,
     },
     index: {
-      current: indexCurrent,
-      change7d: toNumber(indexRow?.change_7d),
-      change30d: toNumber(indexRow?.change_30d),
-      changeAll: indexCurrent === null ? null : Number((indexCurrent - 100).toFixed(2)),
-      baseDate: indexRow?.base_date ? String(indexRow.base_date).slice(0, 10) : null,
-      constituents: indexRow?.constituents ?? 0,
+      current: lastPoint?.value ?? null,
+      change7d: changeOverDays(7),
+      change30d: changeOverDays(30),
+      changeAll:
+        lastPoint && firstPoint && firstPoint.value > 0
+          ? Number((((lastPoint.value - firstPoint.value) / firstPoint.value) * 100).toFixed(2))
+          : null,
+      baseDate: firstPoint?.date ?? null,
+      constituents: constituentsRow?.constituents ?? 0,
+      series,
     },
     breadth: {
       advancing: breadth?.advancing ?? 0,

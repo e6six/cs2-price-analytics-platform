@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { HttpClient } from "@/lib/http";
 import { getConfig, hasCredential } from "@/lib/config";
+import { logger } from "@/lib/logger";
 import type { Provider, ProviderResult, RawQuote } from "@/lib/ingest/types";
 
 /**
@@ -26,8 +27,10 @@ const datasetSchema = z.object({
 });
 
 const contentsResponseSchema = z.object({
-  content: z.string(),
-  encoding: z.string(),
+  /** Пусто, если файл больше лимита contents API (1 МБ). */
+  content: z.string().optional(),
+  encoding: z.string().optional(),
+  size: z.number().optional(),
 });
 
 export const steamDatasetProvider: Provider = {
@@ -53,11 +56,35 @@ export const steamDatasetProvider: Provider = {
       },
     });
 
-    const contents = contentsResponseSchema.parse(
-      await client.requestJson<unknown>(`/repos/${repo}/contents/static/latest.json`, { signal }),
-    );
-    const decoded = Buffer.from(contents.content, contents.encoding === "base64" ? "base64" : "utf8").toString("utf8");
-    const dataset = datasetSchema.parse(JSON.parse(decoded));
+    const path = `/repos/${repo}/contents/static/latest.json`;
+    const contents = contentsResponseSchema.parse(await client.requestJson<unknown>(path, { signal }));
+
+    const inline = contents.content?.trim() ?? "";
+    let decoded: string;
+    if (inline) {
+      decoded = Buffer.from(inline, contents.encoding === "base64" ? "base64" : "utf8").toString("utf8");
+    } else {
+      // Файл датасета больше 1 МБ, поэтому contents API отдаёт его без
+      // содержимого (`encoding: "none"`). Забираем тот же файл raw-медиатипом:
+      // GitHub отдаёт так до 100 МБ.
+      logger.info("датасет Steam больше лимита contents API — читаем raw-содержимое", {
+        repo,
+        sizeBytes: contents.size ?? null,
+      });
+      decoded = await client.requestText(path, {
+        headers: { accept: "application/vnd.github.raw" },
+        signal,
+      });
+    }
+
+    let dataset: z.infer<typeof datasetSchema>;
+    try {
+      dataset = datasetSchema.parse(JSON.parse(decoded));
+    } catch (error) {
+      throw new Error(
+        `steam-dataset: не удалось разобрать ${repo}/static/latest.json (${error instanceof Error ? error.message : String(error)})`,
+      );
+    }
 
     const capturedAt = new Date(dataset.metadata.updated_at);
     if (Number.isNaN(capturedAt.getTime())) {

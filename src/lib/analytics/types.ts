@@ -165,6 +165,8 @@ export type AnalyticsSummary = {
     changeAll: number | null;
     baseDate: string | null;
     constituents: number;
+    /** Ряд индекса по датам: медиана отношений цен к первой точке. */
+    series: Array<{ date: string; value: number }>;
   };
   breadth: { advancing: number; declining: number; flat: number };
   topGainers: CatalogItem[];
