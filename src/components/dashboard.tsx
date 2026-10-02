@@ -14,6 +14,7 @@ import type {
 } from "@/lib/analytics/types";
 import { CatalogView, CalculatorView, DataView, MarketsView, OverviewView, WatchlistView, type CatalogFiltersState } from "@/components/views";
 import { ItemDetailDrawer } from "@/components/item-detail";
+import { InventoryView } from "@/components/inventory-view";
 import { Badge, FreshnessBadge } from "@/components/ui";
 import { formatNumber } from "@/lib/format";
 
@@ -32,13 +33,14 @@ export type DashboardInitialData = {
   chart: { item: CatalogItem | null; history: HistoryPoint[]; options: CatalogItem[] };
 };
 
-type ViewKey = "overview" | "catalog" | "markets" | "watchlist" | "calculator" | "data";
+type ViewKey = "overview" | "catalog" | "markets" | "watchlist" | "inventory" | "calculator" | "data";
 
 const VIEW_LABELS: Record<ViewKey, string> = {
   overview: "Обзор рынка",
   catalog: "Каталог предметов",
   markets: "Площадки",
   watchlist: "Избранное",
+  inventory: "Инвентарь",
   calculator: "Калькулятор",
   data: "Источники данных",
 };
@@ -48,6 +50,7 @@ const VIEW_ICONS: Record<ViewKey, string> = {
   catalog: "▤",
   markets: "◈",
   watchlist: "★",
+  inventory: "▣",
   calculator: "⌗",
   data: "◍",
 };
@@ -235,7 +238,7 @@ export function Dashboard({ initial }: { initial: DashboardInitialData }) {
           ))}
 
           <span className="nav-section-label nav-tools-label">Инструменты</span>
-          {(["watchlist", "calculator", "data"] as ViewKey[]).map((key) => (
+          {(["watchlist", "inventory", "calculator", "data"] as ViewKey[]).map((key) => (
             <button
               key={key}
               type="button"
@@ -357,6 +360,8 @@ export function Dashboard({ initial }: { initial: DashboardInitialData }) {
               onRemove={(item) => toggleWatch(item)}
             />
           ) : null}
+
+          {view === "inventory" ? <InventoryView /> : null}
 
           {view === "calculator" ? (
             <CalculatorView items={initial.chart.options} markets={initial.markets} onOpenItem={openItem} />

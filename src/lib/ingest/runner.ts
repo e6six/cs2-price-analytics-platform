@@ -12,6 +12,8 @@ export type SyncOptions = {
   sourceIds?: string[];
   /** Ограничение числа предметов (для item-источников). */
   limit?: number;
+  /** Точечное обновление конкретных market_hash_name (Steam / карточка предмета). */
+  marketHashNames?: string[];
   /** Пересобрать дневную историю из накопленных котировок. */
   aggregateHistory?: boolean;
   triggeredBy?: string;
@@ -52,10 +54,17 @@ function round(value: number, digits = 4): string {
 async function normalizeToUsd(
   db: Database,
   quote: RawQuote,
+  rateCache: Map<string, { rate: number; source: "db" | "static" }>,
 ): Promise<{ priceUsd: number; note: string | null }> {
   if (quote.currency === "USD") return { priceUsd: quote.price, note: quote.note ?? null };
 
-  const { rate, source } = await getUsdRate(db, quote.currency, quote.capturedAt);
+  const cacheKey = `${quote.currency}:${quote.capturedAt.toISOString().slice(0, 10)}`;
+  let conversion = rateCache.get(cacheKey);
+  if (!conversion) {
+    conversion = await getUsdRate(db, quote.currency, quote.capturedAt);
+    rateCache.set(cacheKey, conversion);
+  }
+  const { rate, source } = conversion;
   if (source === "static") {
     return {
       priceUsd: quote.price * rate,
@@ -82,6 +91,7 @@ async function persistQuotes(db: Database, runId: number, quotes: RawQuote[]): P
   }
 
   const prepared: Array<typeof priceQuotes.$inferInsert> = [];
+  const rateCache = new Map<string, { rate: number; source: "db" | "static" }>();
   let unmatched = 0;
 
   for (const quote of quotes) {
@@ -90,7 +100,7 @@ async function persistQuotes(db: Database, runId: number, quotes: RawQuote[]): P
       unmatched += 1;
       continue;
     }
-    const { priceUsd, note } = await normalizeToUsd(db, quote);
+    const { priceUsd, note } = await normalizeToUsd(db, quote, rateCache);
     prepared.push({
       sourceKey: `${quote.marketId}:${quote.priceKind}:${itemId}:${quote.capturedAt.toISOString()}`,
       itemId,
@@ -243,15 +253,19 @@ async function runProvider(db: Database, provider: Provider, options: SyncOption
     let marketHashNames: string[] | undefined;
 
     if (provider.mode === "item") {
-      const limit = options.limit ?? config.SYNC_MAX_ITEMS;
-      // Точечное обновление идёт по предметам с наибольшим покрытием истории:
-      // сначала самые значимые для аналитики позиции.
-      const rows = await db
-        .select({ marketHashName: items.marketHashName })
-        .from(items)
-        .orderBy(sql`${items.popularity} desc, ${items.id} asc`)
-        .limit(limit);
-      marketHashNames = rows.map((row) => row.marketHashName);
+      if (options.marketHashNames?.length) {
+        const requested = [...new Set(options.marketHashNames.map((name) => name.trim()).filter(Boolean))];
+        marketHashNames = requested.slice(0, options.limit ?? requested.length);
+      } else {
+        const limit = options.limit ?? config.SYNC_MAX_ITEMS;
+        // Фоновое точечное обновление идёт по наиболее значимым предметам.
+        const rows = await db
+          .select({ marketHashName: items.marketHashName })
+          .from(items)
+          .orderBy(sql`${items.popularity} desc, ${items.id} asc`)
+          .limit(limit);
+        marketHashNames = rows.map((row) => row.marketHashName);
+      }
     } else if (options.limit && options.limit > 0) {
       const rows = await db
         .select({ marketHashName: items.marketHashName })
@@ -264,7 +278,7 @@ async function runProvider(db: Database, provider: Provider, options: SyncOption
     const result = await provider.fetchQuotes({ marketHashNames, limit: options.limit, signal: options.signal });
     const { inserted, unmatched } = await persistQuotes(db, run.id, result.quotes);
     const missing = result.missing?.length ?? 0;
-    const status: "success" | "partial" = inserted > 0 && (unmatched > 0 || missing > 0) ? "partial" : "success";
+    const status: "success" | "partial" = unmatched > 0 || missing > 0 ? "partial" : "success";
 
     await db
       .update(ingestRuns)
@@ -340,12 +354,20 @@ export async function syncSources(db: Database, options: SyncOptions = {}): Prom
   }
 
   const runs: SyncReport["runs"] = [];
-  const needsFx = selected.some((provider) => provider.id === "buff163");
+  const config = getConfig();
+  const needsFx = selected.some(
+    (provider) =>
+      !provider.disabledReason?.() &&
+      (provider.id === "buff163" ||
+        (provider.id === "skinbaron" && config.SKINBARON_PRICE_CURRENCY !== "USD") ||
+        (provider.id === "lisskins" && config.LISSKINS_PRICE_CURRENCY !== "USD")),
+  );
+  let fxRows = 0;
 
   if (needsFx) {
-    const fxRows = await syncFxRates(db);
+    fxRows = await syncFxRates(db);
     if (fxRows === 0) {
-      logger.warn("курсы валют недоступны: цены в CNY будут сохранены без нормализации");
+      logger.warn("актуальный курс валют недоступен: будет использован последний известный или помеченный fallback");
     }
   }
 
@@ -382,7 +404,7 @@ export async function syncSources(db: Database, options: SyncOptions = {}): Prom
     await refreshItemStats(db);
   }
 
-  return { runs, historyRows, fxRows: needsFx ? 1 : 0 };
+  return { runs, historyRows, fxRows };
 }
 
 export function providerCatalog() {
