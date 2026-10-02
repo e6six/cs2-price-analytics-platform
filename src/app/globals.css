@@ -1502,3 +1502,97 @@ a:hover {
     background-position: -200% 0;
   }
 }
+
+/* ----------------------------------------------------------- Инвентарь */
+
+.primary-button {
+  align-self: flex-end;
+  padding: 9px 15px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.inventory-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.inventory-id-field {
+  flex: 1;
+  min-width: 220px;
+}
+
+.inventory-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0 12px;
+}
+
+.inventory-search-field {
+  width: min(100%, 340px);
+}
+
+.inventory-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 118px;
+}
+
+.inventory-price strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-price .badge {
+  margin-top: 3px;
+}
+
+.inventory-error {
+  margin-top: 12px;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--negative) 35%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--negative) 8%, transparent);
+  color: var(--negative);
+  font-size: 12px;
+}
+
+.inventory-truncated {
+  margin-bottom: 12px;
+}
+
+.inventory-table td {
+  vertical-align: middle;
+}
+
+@media (max-width: 700px) {
+  .inventory-form,
+  .inventory-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .inventory-id-field,
+  .inventory-search-field {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .inventory-form .primary-button {
+    align-self: stretch;
+  }
+}

@@ -207,3 +207,44 @@ export type IngestRunView = {
   historyUpserted: number;
   message: string | null;
 };
+
+export type InventoryPriceView = {
+  marketId: string;
+  price: number;
+  currency: string;
+  priceUsd: number;
+  capturedAt: string;
+  sourceUrl: string | null;
+  isLive: boolean;
+  ageHours: number;
+  isStale: boolean;
+};
+
+export type InventoryItemView = {
+  name: string;
+  marketHashName: string | null;
+  imageUrl: string | null;
+  amount: number;
+  assetCount: number;
+  marketable: boolean;
+  steam: InventoryPriceView | null;
+  external: InventoryPriceView | null;
+};
+
+export type InventoryValuation = {
+  steamId64: string;
+  fetchedAt: string;
+  pagesFetched: number;
+  truncated: boolean;
+  totalInventoryCount: number | null;
+  totals: {
+    assets: number;
+    marketableAssets: number;
+    unmarketableAssets: number;
+    steamPricedAssets: number;
+    externalPricedAssets: number;
+    steamValueUsd: number;
+    externalValueUsd: number;
+  };
+  items: InventoryItemView[];
+};

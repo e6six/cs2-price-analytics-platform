@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { HttpClient } from "@/lib/http";
 import { logger } from "@/lib/logger";
-import { getConfig } from "@/lib/config";
+import { getSteamHttpClient } from "@/lib/steam/http-client";
 import type { Provider, ProviderResult, RawQuote } from "@/lib/ingest/types";
 import { normalizePrice, normalizeVolume } from "@/lib/ingest/types";
 
@@ -52,26 +51,20 @@ export const steamCommunityProvider: Provider = {
   requiresCredentials: false,
 
   async fetchQuotes({ marketHashNames, limit, signal }): Promise<ProviderResult> {
-    const config = getConfig();
     if (!marketHashNames || marketHashNames.length === 0) {
       throw new Error("steam-community требует список market_hash_name (режим item)");
     }
 
-    const client = new HttpClient({
-      sourceId: "steam-community",
-      baseUrl: "https://steamcommunity.com",
-      minIntervalMs: 4_000,
-      concurrency: 1,
-      maxPerMinute: 12,
-      maxRetries: 3,
-      timeoutMs: config.SYNC_REQUEST_TIMEOUT_MS,
-    });
+    // Shared with public inventory requests so we cannot accidentally apply
+    // separate per-process rate limits to different Steam endpoints.
+    const client = getSteamHttpClient();
 
     const targets = marketHashNames.slice(0, limit ?? marketHashNames.length);
     const quotes: RawQuote[] = [];
     const missing: string[] = [];
     let requests = 0;
     let rateLimited = false;
+    const errorMessages = new Set<string>();
 
     for (const name of targets) {
       if (signal?.aborted) break;
@@ -89,7 +82,8 @@ export const steamCommunityProvider: Provider = {
           continue;
         }
 
-        const lowest = normalizePrice(payload.lowest_price ?? payload.median_price);
+        // Не подменяем минимальный лот медианой продаж: это разные типы цен.
+        const lowest = normalizePrice(payload.lowest_price);
         if (lowest === null) {
           missing.push(name);
           continue;
@@ -104,10 +98,11 @@ export const steamCommunityProvider: Provider = {
           volume: normalizeVolume(payload.volume),
           capturedAt: new Date(),
           sourceUrl: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(name)}`,
-          note: "минимальная цена лота в Steam Community Market (валюта USD)",
+          note: "lowest_price из Steam Community Market priceoverview (валюта USD); цена в Steam Wallet, а не денежная выплата",
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        errorMessages.add(message);
         if (message.includes("429")) rateLimited = true;
         logger.warn("steam-community: предмет пропущен", { name, error: message });
         missing.push(name);
@@ -119,8 +114,10 @@ export const steamCommunityProvider: Provider = {
       requests,
       missing,
       notes: rateLimited
-        ? "Steam вернул 429: оставшиеся предметы перенесены на следующий прогон"
-        : `запрошено ${targets.length} предметов`,
+        ? `Steam вернул 429: обработано ${quotes.length} из ${targets.length}; оставшиеся предметы перенесены на следующий прогон`
+        : errorMessages.size > 0
+          ? `запрошено ${targets.length}, получено ${quotes.length}; ошибки Steam: ${[...errorMessages].join("; ")}`
+          : `запрошено ${targets.length}, получено ${quotes.length} котировок, без активной lowest_price: ${missing.length}`,
     };
   },
 };

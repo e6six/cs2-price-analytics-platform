@@ -180,6 +180,7 @@ export function shortMarketName(name: string): string {
     buff163: "BUFF163",
     dmarket: "DMarket",
     skinbaron: "SkinBaron",
+    lisskins: "LIS-SKINS",
     "dataset:csgo-api": "CSGO-API",
     "dataset:steam-price-tracker": "Steam Tracker",
   };
