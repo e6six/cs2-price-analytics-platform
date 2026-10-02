@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { Icon, TrendTriangle, type IconName } from "@/components/icons";
 import { formatAge, formatPercent, formatUsd } from "@/lib/format";
 
 export function Panel({
@@ -72,7 +73,7 @@ export function ChangeValue({
   const tone = value > 0 ? "positive" : value < 0 ? "negative" : "flat";
   return (
     <span className={`change change-${tone}`}>
-      {showIcon && tone !== "flat" ? (tone === "positive" ? "▲" : "▼") : null}
+      {showIcon && tone !== "flat" ? <TrendTriangle direction={tone === "positive" ? "up" : "down"} /> : null}
       {formatPercent(value)}
       {suffix !== "%" ? suffix : null}
     </span>
@@ -85,16 +86,25 @@ export function StatCard({
   hint,
   change,
   tone = "lime",
+  icon,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   change?: number | null;
   tone?: "lime" | "blue" | "violet" | "amber";
+  icon?: IconName;
 }) {
   return (
     <article className={`stat-card stat-${tone}`}>
-      <div className="stat-label">{label}</div>
+      <div className="stat-head">
+        {icon ? (
+          <span className="stat-icon">
+            <Icon name={icon} />
+          </span>
+        ) : null}
+        <div className="stat-label">{label}</div>
+      </div>
       <div className="stat-value">{value}</div>
       <div className="stat-foot">
         {change !== undefined ? <ChangeValue value={change} /> : null}
@@ -125,7 +135,6 @@ export function FreshnessBadge({
     </Badge>
   );
 }
-
 export function ItemArt({
   imageUrl,
   name,
@@ -137,24 +146,48 @@ export function ItemArt({
   size?: number;
   rarityColor?: string | null;
 }) {
+  // Если CDN изображений недоступен (блокировка, офлайн-контур), плитка
+  // показывает монограмму, а не «сломанную картинку».
+  const [failed, setFailed] = useState(false);
+  const showImage = imageUrl !== null && imageUrl !== "" && !failed;
+
   return (
     <span
-      className="item-art"
-      style={{
-        width: size,
-        height: size,
-        background: rarityColor ? `linear-gradient(160deg, ${rarityColor}22, transparent 70%)` : undefined,
-      }}
+      className={rarityColor ? "item-art item-art-rarity" : "item-art"}
+      style={
+        {
+          width: size,
+          height: size,
+          // Цвет редкости даёт предмету «оправу»: рамка, подсветка снизу и тень.
+          "--rarity": rarityColor ?? undefined,
+          borderColor: rarityColor ? `color-mix(in srgb, ${rarityColor} 45%, var(--border))` : undefined,
+          background: rarityColor
+            ? `radial-gradient(120% 120% at 30% 0%, ${rarityColor}2e, transparent 62%), linear-gradient(160deg, var(--surface-2), var(--surface))`
+            : undefined,
+        } as CSSProperties
+      }
     >
-      {imageUrl ? (
+      {showImage ? (
         // Изображения Valve размещены на CDN Steam; оптимизация Next для них отключена.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt={name} loading="lazy" decoding="async" />
+        <img src={imageUrl} alt={name} loading="lazy" decoding="async" onError={() => setFailed(true)} />
       ) : (
-        <span className="item-art-fallback">{name.slice(0, 2).toUpperCase()}</span>
+        <span
+          className="item-art-fallback"
+          style={{ color: rarityColor ? `color-mix(in srgb, ${rarityColor} 72%, var(--text))` : undefined }}
+        >
+          {monogram(name)}
+        </span>
       )}
     </span>
   );
+}
+
+/** Короткая монограмма для плитки без изображения: «AK-47 | Redline» → «AK». */
+function monogram(name: string): string {
+  const cleaned = name.replace(/[★™]/g, "").trim();
+  const word = cleaned.split(/[\s|]+/).find((part) => /[\p{L}\p{N}]/u.test(part)) ?? cleaned;
+  return word.slice(0, 2).toUpperCase();
 }
 
 export function StatusDot({ tone }: { tone: "positive" | "warning" | "negative" | "neutral" | "accent" }) {
@@ -164,7 +197,9 @@ export function StatusDot({ tone }: { tone: "positive" | "warning" | "negative" 
 export function EmptyState({ title, hint, action }: { title: string; hint?: string; action?: ReactNode }) {
   return (
     <div className="empty-state">
-      <div className="empty-symbol">∅</div>
+      <div className="empty-symbol">
+        <Icon name="empty" />
+      </div>
       <div>
         <div className="empty-title">{title}</div>
         {hint ? <div className="empty-hint">{hint}</div> : null}

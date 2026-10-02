@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { ItemDetail } from "@/lib/analytics/types";
 import { PriceChart } from "@/components/price-chart";
 import { Badge, ChangeValue, EmptyState, InfoRow, ItemArt, Panel, Skeleton, Tabs } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import {
   categoryLabel,
   formatDate,
@@ -93,6 +94,15 @@ export function ItemDetailDrawer({
     return () => controller.abort();
   }, [slug, range]);
 
+  // Esc закрывает карточку: привычное ожидание для диалога.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   const detail = state.detail;
   const loading = detail === null;
   const error = state.error;
@@ -122,11 +132,17 @@ export function ItemDetailDrawer({
             )}
           </div>
           <div className="drawer-actions">
-            <button type="button" className={isWatched ? "watch-button watch-on" : "watch-button"} onClick={() => onToggleWatch(slug)} title="В избранное">
-              ★
+            <button
+              type="button"
+              className={isWatched ? "watch-button watch-on" : "watch-button"}
+              onClick={() => onToggleWatch(slug)}
+              title={isWatched ? "Убрать из избранного" : "В избранное"}
+              aria-label="Избранное"
+            >
+              <Icon name="star" />
             </button>
             <button type="button" className="icon-button" onClick={onClose} aria-label="Закрыть">
-              ✕
+              <Icon name="close" />
             </button>
           </div>
         </header>
@@ -171,7 +187,7 @@ export function ItemDetailDrawer({
                 <div className="detail-stat">
                   <span className="metric-label">История</span>
                   <strong>
-                    {detail.stats.historyFrom ? `${formatDate(detail.stats.historyFrom)} → ${formatDate(detail.stats.historyTo)}` : "—"}
+                    {detail.stats.historyFrom ? `${formatDate(detail.stats.historyFrom)} — ${formatDate(detail.stats.historyTo)}` : "—"}
                   </strong>
                   <span className="muted small">{formatNumber(detail.stats.points)} наблюдений</span>
                 </div>
@@ -241,7 +257,7 @@ export function ItemDetailDrawer({
                             <td>
                               {offer.sourceUrl ? (
                                 <a className="link-button" href={offer.sourceUrl} target="_blank" rel="noreferrer noopener">
-                                  Источник ↗
+                                  Источник
                                 </a>
                               ) : null}
                             </td>

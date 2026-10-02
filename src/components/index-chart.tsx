@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { formatDate, formatPercent } from "@/lib/format";
+import { areaFromPath, niceTicks, smoothPath, useElementWidth } from "@/components/chart-utils";
 
 type Point = { date: string; value: number };
 
@@ -9,8 +10,9 @@ type Point = { date: string; value: number };
  * График индекса рынка: медиана отношений цен корзины предметов к первой дате
  * (база 100). Показывает форму рынка, а не цену конкретного предмета.
  */
-export function IndexChart({ series, height = 180 }: { series: Point[]; height?: number }) {
+export function IndexChart({ series, height = 168 }: { series: Point[]; height?: number }) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const { ref: containerRef, width } = useElementWidth<HTMLDivElement>(760);
 
   const points = useMemo(
     () => [...series].sort((left, right) => left.date.localeCompare(right.date)),
@@ -25,8 +27,7 @@ export function IndexChart({ series, height = 180 }: { series: Point[]; height?:
     );
   }
 
-  const width = 760;
-  const padding = { top: 14, right: 18, bottom: 24, left: 40 };
+  const padding = { top: 14, right: 18, bottom: 24, left: 44 };
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
 
@@ -44,13 +45,13 @@ export function IndexChart({ series, height = 180 }: { series: Point[]; height?:
   const x = (index: number) => padding.left + ((times[index] - minTime) / timeSpan) * innerWidth;
   const y = (value: number) => padding.top + innerHeight - ((value - lower) / (upper - lower)) * innerHeight;
 
-  const linePath = points
-    .map((point, index) => `${index === 0 ? "M" : "L"}${x(index).toFixed(1)},${y(point.value).toFixed(1)}`)
-    .join(" ");
-  const areaPath = `${linePath} L${x(points.length - 1).toFixed(1)},${(padding.top + innerHeight).toFixed(1)} L${x(0).toFixed(1)},${(padding.top + innerHeight).toFixed(1)} Z`;
+  const coordinates = points.map((point, index) => ({ x: x(index), y: y(point.value) }));
+  const linePath = smoothPath(coordinates);
+  const areaPath = areaFromPath(linePath, coordinates, padding.top + innerHeight);
+  const gradientId = "index-area";
 
   const baseline = y(100);
-  const gridValues = [upper, (upper + lower) / 2, lower];
+  const gridValues = niceTicks(lower, upper, 3);
   const active = hoverIndex === null ? null : points[hoverIndex];
   const last = points[points.length - 1];
   const first = points[0];
@@ -62,14 +63,16 @@ export function IndexChart({ series, height = 180 }: { series: Point[]; height?:
         <div>
           <span className="chart-value">{last.value.toFixed(2)}</span>
           <span className="chart-sub">
-            за период {formatPercent(trend)} · {formatDate(first.date)} → {formatDate(last.date)} · {points.length} точек
+            за период {formatPercent(trend)} · {formatDate(first.date)} — {formatDate(last.date)} · {points.length} точек
           </span>
         </div>
         <span className="muted small">медиана отношений цен к базовой дате, база 100</span>
       </div>
 
+      <div className="chart-canvas" ref={containerRef}>
       <svg
         viewBox={`0 0 ${width} ${height}`}
+        height={height}
         className="chart-svg"
         role="img"
         aria-label="График индекса рынка"
@@ -89,6 +92,13 @@ export function IndexChart({ series, height = 180 }: { series: Point[]; height?:
           setHoverIndex(nearest);
         }}
       >
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.01" />
+          </linearGradient>
+        </defs>
+
         {gridValues.map((value) => (
           <g key={value}>
             <line
@@ -98,7 +108,7 @@ export function IndexChart({ series, height = 180 }: { series: Point[]; height?:
               y2={y(value)}
               className="chart-grid-line"
             />
-            <text x={padding.left - 6} y={y(value) + 3} className="chart-axis-label" textAnchor="end">
+            <text x={padding.left - 8} y={y(value) + 3} className="chart-axis-label" textAnchor="end">
               {value.toFixed(0)}
             </text>
           </g>
@@ -110,7 +120,7 @@ export function IndexChart({ series, height = 180 }: { series: Point[]; height?:
           y2={baseline}
           className="chart-grid-line chart-grid-baseline"
         />
-        <path d={areaPath} className="chart-area" />
+        <path d={areaPath} fill={`url(#${gradientId})`} />
         <path d={linePath} className="chart-line" />
         {active ? (
           <g>
@@ -125,11 +135,15 @@ export function IndexChart({ series, height = 180 }: { series: Point[]; height?:
           </g>
         ) : null}
       </svg>
+      </div>
 
-      <div className="chart-footnote muted small">
-        {active
-          ? `${formatDate(active.date)} — ${active.value.toFixed(2)}`
-          : "Наведите курсор, чтобы увидеть значение на конкретную дату"}
+      <div className="chart-footnote">
+        <span>База 100 · {formatDate(first.date)}</span>
+        <span>
+          {active
+            ? `${formatDate(active.date)} — ${active.value.toFixed(2)}`
+            : "Наведите курсор, чтобы увидеть значение на конкретную дату"}
+        </span>
       </div>
     </div>
   );

@@ -1,3 +1,5 @@
+import { BrandMark } from "@/components/icons";
+
 /**
  * Состояние загрузки: первый запуск может включать импорт набора данных,
  * поэтому страница показывает скелетон, а не пустой экран.
@@ -7,10 +9,12 @@ export default function Loading() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark">CS2</span>
+          <span className="brand-mark">
+            <BrandMark />
+          </span>
           <div>
             <div className="brand-title">CS2 Index</div>
-            <div className="brand-sub">аналитика цен</div>
+            <div className="brand-sub">аналитика цен предметов</div>
           </div>
         </div>
         <div className="sidebar-status">

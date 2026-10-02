@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { STORAGE_KEYS, useStoredList, useStoredString } from "@/lib/client-store";
 import type {
   AnalyticsSummary,
@@ -16,6 +16,7 @@ import { CatalogView, CalculatorView, DataView, MarketsView, OverviewView, Watch
 import { ItemDetailDrawer } from "@/components/item-detail";
 import { InventoryView } from "@/components/inventory-view";
 import { Badge, FreshnessBadge } from "@/components/ui";
+import { BrandMark, Icon, type IconName } from "@/components/icons";
 import { formatNumber } from "@/lib/format";
 
 export type DashboardInitialData = {
@@ -45,14 +46,14 @@ const VIEW_LABELS: Record<ViewKey, string> = {
   data: "Источники данных",
 };
 
-const VIEW_ICONS: Record<ViewKey, string> = {
-  overview: "◧",
-  catalog: "▤",
-  markets: "◈",
-  watchlist: "★",
-  inventory: "▣",
-  calculator: "⌗",
-  data: "◍",
+const VIEW_ICONS: Record<ViewKey, IconName> = {
+  overview: "overview",
+  catalog: "catalog",
+  markets: "markets",
+  watchlist: "star",
+  inventory: "inventory",
+  calculator: "calculator",
+  data: "data",
 };
 
 const DEFAULT_FILTERS: CatalogFiltersState = {
@@ -83,10 +84,25 @@ export function Dashboard({ initial }: { initial: DashboardInitialData }) {
   const [summary, setSummary] = useState<AnalyticsSummary>(initial.summary);
   const [theme, setTheme] = useStoredString(STORAGE_KEYS.theme, "dark");
   const [searchDraft, setSearchDraft] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme === "light" ? "light" : "dark";
   }, [theme]);
+
+  // «/» переводит фокус в поиск: привычный жест для аналитических интерфейсов.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing = target ? /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable : false;
+      if (event.key === "/" && !typing) {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const loadCatalog = useCallback(
     async (nextFilters: CatalogFiltersState, nextPage: number) => {
@@ -214,10 +230,12 @@ export function Dashboard({ initial }: { initial: DashboardInitialData }) {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark">CS2</span>
+          <span className="brand-mark">
+            <BrandMark />
+          </span>
           <div>
             <div className="brand-title">CS2 Index</div>
-            <div className="brand-sub">аналитика цен</div>
+            <div className="brand-sub">аналитика цен предметов</div>
           </div>
         </div>
 
@@ -230,7 +248,9 @@ export function Dashboard({ initial }: { initial: DashboardInitialData }) {
               className={view === key ? "nav-button nav-active" : "nav-button"}
               onClick={() => setView(key)}
             >
-              <span className="nav-icon">{VIEW_ICONS[key]}</span>
+              <span className="nav-icon">
+                <Icon name={VIEW_ICONS[key]} />
+              </span>
               <span>{VIEW_LABELS[key]}</span>
               {key === "catalog" ? <span className="nav-count">{formatNumber(summary.coverage.items)}</span> : null}
               {key === "markets" ? <span className="nav-count">{formatNumber(summary.coverage.marketsWithQuotes)}</span> : null}
@@ -245,7 +265,9 @@ export function Dashboard({ initial }: { initial: DashboardInitialData }) {
               className={view === key ? "nav-button nav-active" : "nav-button"}
               onClick={() => setView(key)}
             >
-              <span className="nav-icon">{VIEW_ICONS[key]}</span>
+              <span className="nav-icon">
+                <Icon name={VIEW_ICONS[key]} />
+              </span>
               <span>{VIEW_LABELS[key]}</span>
               {key === "watchlist" && watchlist.length > 0 ? <span className="nav-count">{watchlist.length}</span> : null}
             </button>
@@ -253,6 +275,18 @@ export function Dashboard({ initial }: { initial: DashboardInitialData }) {
         </nav>
 
         <div className="sidebar-spacer" />
+
+        <div className="sidebar-links">
+          <a href="https://github.com/e6six/cs2-price-analytics-platform" target="_blank" rel="noreferrer noopener">
+            Исходный код
+          </a>
+          <a href="/api/metrics" target="_blank" rel="noreferrer noopener">
+            Метрики API
+          </a>
+          <a href="/api/health" target="_blank" rel="noreferrer noopener">
+            Состояние
+          </a>
+        </div>
 
         <div className="sidebar-status">
           <div className="sidebar-status-head">СОСТОЯНИЕ ДАННЫХ</div>
@@ -292,25 +326,31 @@ export function Dashboard({ initial }: { initial: DashboardInitialData }) {
                 submitSearch();
               }}
             >
+              <span className="global-search-ico">
+                <Icon name="search" />
+              </span>
               <input
+                ref={searchRef}
                 type="search"
                 value={searchDraft}
                 placeholder="Поиск предмета, коллекции, оружия"
                 onChange={(event) => setSearchDraft(event.target.value)}
                 aria-label="Поиск"
               />
+              <kbd className="kbd" title="Фокус в поиск">/</kbd>
               <button type="submit">Найти</button>
             </form>
-            <button type="button" className="icon-button" onClick={() => void refresh()} title="Обновить данные">
-              ⟳
+            <button type="button" className="icon-button" onClick={() => void refresh()} title="Обновить данные" aria-label="Обновить данные">
+              <Icon name="refresh" />
             </button>
             <button
               type="button"
               className="icon-button"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               title="Сменить тему"
+              aria-label="Сменить тему"
             >
-              {theme === "dark" ? "☾" : "☀"}
+              <Icon name={theme === "dark" ? "moon" : "sun"} />
             </button>
           </div>
         </header>
@@ -375,7 +415,8 @@ export function Dashboard({ initial }: { initial: DashboardInitialData }) {
         <footer className="page-footer">
           <div>
             <Badge tone="neutral">№ {formatNumber(summary.coverage.items)} предметов</Badge>{" "}
-            <Badge tone="neutral">{formatNumber(summary.coverage.quotes)} котировок</Badge>
+            <Badge tone="neutral">{formatNumber(summary.coverage.quotes)} котировок</Badge>{" "}
+            <Badge tone="neutral">{formatNumber(summary.coverage.historyPoints)} точек истории</Badge>
           </div>
           <p>
             Сервис не продаёт скины, не принимает средства и не связан с Valve Corporation. Цены — снимки публичных предложений площадок с
