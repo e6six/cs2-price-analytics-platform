@@ -1,22 +1,33 @@
-import { getItemDetail } from "@/lib/cs2-data";
+import { getReadyDb } from "@/db";
+import { notFound, parseQuery, route } from "@/lib/api/http";
+import { historyRangeSchema, RANGE_DAYS } from "@/lib/api/validation";
+import { getItemDetail } from "@/lib/analytics/queries";
 
 export const dynamic = "force-dynamic";
 
-type RouteContext = { params: Promise<{ id: string }> };
+/**
+ * Карточка предмета: метаданные, актуальные котировки всех подключённых
+ * площадок с указанием источника и времени снимка, история и статистика.
+ * Принимает как числовой id, так и slug.
+ */
+export const GET = route(
+  async (request, { params: routeParams }) => {
+    const params = parseQuery(request);
+    const parsed = historyRangeSchema.safeParse({
+      range: params.get("range") ?? undefined,
+      market: params.get("market") ?? undefined,
+    });
 
-export async function GET(_request: Request, context: RouteContext) {
-  try {
-    const { id } = await context.params;
-    const itemId = Number.parseInt(id, 10);
-    if (!Number.isSafeInteger(itemId) || itemId < 1) {
-      return Response.json({ error: "Некорректный идентификатор предмета" }, { status: 400 });
-    }
+    const identifier = routeParams.id ?? "";
 
-    const detail = await getItemDetail(itemId);
-    if (!detail) return Response.json({ error: "Предмет не найден" }, { status: 404 });
-    return Response.json({ ...detail, demo: true });
-  } catch (error) {
-    console.error("GET /api/items/[id] failed", error);
-    return Response.json({ error: "Не удалось загрузить предмет" }, { status: 500 });
-  }
-}
+    const db = await getReadyDb();
+    const detail = await getItemDetail(db, identifier, parsed.success ? RANGE_DAYS[parsed.data.range] : 365);
+    if (!detail) throw notFound("Предмет не найден");
+
+    return {
+      ...detail,
+      range: parsed.success ? parsed.data.range : "365d",
+    };
+  },
+  { cache: { sMaxAge: 120, staleWhileRevalidate: 600 } },
+);

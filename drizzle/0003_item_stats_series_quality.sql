@@ -1,0 +1,1 @@
+ALTER TABLE "cs2_item_stats" ADD COLUMN "series_noisy" boolean DEFAULT false NOT NULL;

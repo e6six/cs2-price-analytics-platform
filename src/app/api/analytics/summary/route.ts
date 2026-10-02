@@ -1,12 +1,15 @@
-import { getAnalyticsSummary } from "@/lib/cs2-data";
+import { getReadyDb } from "@/db";
+import { route } from "@/lib/api/http";
+import { getAnalyticsSummary, getItemHistoryCoverage } from "@/lib/analytics/aggregates";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  try {
-    return Response.json(await getAnalyticsSummary());
-  } catch (error) {
-    console.error("GET /api/analytics/summary failed", error);
-    return Response.json({ error: "Не удалось загрузить сводную аналитику" }, { status: 500 });
-  }
-}
+/** Сводка рынка: индекс, широта движения, лидеры роста и падения, покрытие. */
+export const GET = route(
+  async () => {
+    const db = await getReadyDb();
+    const [summary, coverage] = await Promise.all([getAnalyticsSummary(db), getItemHistoryCoverage(db)]);
+    return { ...summary, history: coverage };
+  },
+  { cache: { sMaxAge: 60, staleWhileRevalidate: 300 } },
+);

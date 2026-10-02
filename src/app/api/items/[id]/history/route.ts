@@ -1,25 +1,34 @@
-import { getItemDetail } from "@/lib/cs2-data";
+import { getReadyDb } from "@/db";
+import { badRequest, notFound, parseQuery, route } from "@/lib/api/http";
+import { historyRangeSchema, RANGE_DAYS } from "@/lib/api/validation";
+import { getItemBySlugOrId, getHistory } from "@/lib/analytics/queries";
 
 export const dynamic = "force-dynamic";
 
-type RouteContext = { params: Promise<{ id: string }> };
+/** Временной ряд по предмету: `range=7d|30d|90d|365d`, опционально `market`. */
+export const GET = route(
+  async (request, { params }) => {
+    const query = parseQuery(request);
+    const parsed = historyRangeSchema.safeParse({
+      range: query.get("range") ?? undefined,
+      market: query.get("market") ?? undefined,
+    });
+    if (!parsed.success) throw badRequest("Некорректные параметры истории");
 
-export async function GET(request: Request, context: RouteContext) {
-  try {
-    const { id } = await context.params;
-    const itemId = Number.parseInt(id, 10);
-    if (!Number.isSafeInteger(itemId) || itemId < 1) {
-      return Response.json({ error: "Некорректный идентификатор предмета" }, { status: 400 });
-    }
+    const db = await getReadyDb();
+    const identifier = params.id ?? "";
+    const reference = await getItemBySlugOrId(db, identifier);
+    if (!reference) throw notFound("Предмет не найден");
 
-    const requestedRange = new URL(request.url).searchParams.get("range") ?? "365d";
-    const rangeDays = requestedRange === "7d" ? 7 : requestedRange === "30d" ? 30 : requestedRange === "90d" ? 90 : 365;
-    const detail = await getItemDetail(itemId, rangeDays);
-    if (!detail) return Response.json({ error: "Предмет не найден" }, { status: 404 });
+    const history = await getHistory(db, reference.id, RANGE_DAYS[parsed.data.range], parsed.data.market);
 
-    return Response.json({ itemId, range: requestedRange, history: detail.history, demo: true });
-  } catch (error) {
-    console.error("GET /api/items/[id]/history failed", error);
-    return Response.json({ error: "Не удалось загрузить историю" }, { status: 500 });
-  }
-}
+    return {
+      itemId: reference.id,
+      range: parsed.data.range,
+      marketId: parsed.data.market ?? null,
+      points: history.length,
+      history,
+    };
+  },
+  { cache: { sMaxAge: 300, staleWhileRevalidate: 900 } },
+);
