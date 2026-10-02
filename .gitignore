@@ -1,0 +1,28 @@
+# зависимости и сборка
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+
+# встроенная база (PGlite) и кэш источников
+.cache/
+*.pglite/
+
+# секреты и локальное окружение
+.env
+.env.*
+!.env.example
+
+# логи и временные файлы
+*.log
+npm-debug.log*
+.tmp/
+tmp/
+
+# ОС и редакторы
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

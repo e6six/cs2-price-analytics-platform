@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-10-02T14:54:58.875Z",
+  "generator": "scripts/data/build-bootstrap.ts",
+  "sources": [
+    {
+      "id": "dataset:csgo-api",
+      "repo": "https://github.com/ByMykel/CSGO-API",
+      "commit": "45dbe29036ace44df46b81659820eb49953d72c3",
+      "license": "MIT",
+      "attribution": "ByMykel/CSGO-API",
+      "usedFor": "метаданные предметов (названия, редкость, коллекции, износ, изображения)"
+    },
+    {
+      "id": "dataset:steam-price-tracker",
+      "repo": "https://github.com/ByMykel/counter-strike-price-tracker",
+      "commit": "13b7b1643fd86c6f4b9fce7e11b9b58dd9ea6551",
+      "license": "MIT",
+      "attribution": "ByMykel/counter-strike-price-tracker",
+      "usedFor": "минимальные цены Steam Community Market (снимок и история недельных срезов)"
+    }
+  ],
+  "stats": {
+    "catalogItems": 34029,
+    "catalogByKind": {
+      "skin": 20775,
+      "case": 467,
+      "agent": 63,
+      "key": 27,
+      "music_kit": 185,
+      "charm": 78,
+      "patch": 112,
+      "sticker": 10433,
+      "graffiti": 1812,
+      "collectible": 77
+    },
+    "quoteItems": 27717,
+    "historyItems": 25850,
+    "historyDates": 25,
+    "historyFrom": "2026-02-08",
+    "historyTo": "2026-08-08",
+    "snapshotDate": "2026-08-08"
+  },
+  "files": {
+    "catalog.json.gz": {
+      "bytes": 1754473,
+      "sha256": "e09726763ce113ea023acb94b5ceb41e73649dfbe43c9221173927fd90e3658e",
+      "records": 34029
+    },
+    "quotes.json.gz": {
+      "bytes": 137642,
+      "sha256": "154cc638a521015e95099ac82676488378796500550d05652c10234e062d0c53",
+      "records": 27717
+    },
+    "history.json.gz": {
+      "bytes": 1281211,
+      "sha256": "b89856af63863e59535d8146141f9039ebc839f921f1086d3e6b250dcff33880",
+      "records": 25850
+    }
+  }
+}

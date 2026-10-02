@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790951567495,
+      "tag": "0000_initial_real_data_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790952478581,
+      "tag": "0001_item_stats_materialization",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790952613087,
+      "tag": "0002_item_stats_reference_dates",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790952795881,
+      "tag": "0003_item_stats_series_quality",
+      "breakpoints": true
+    }
+  ]
+}
